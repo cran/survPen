@@ -97,7 +97,7 @@ NULL
 #' \item{Hess.rho.modif}{if TRUE, the hessian of LCV or LAML has been perturbed at convergence}
 #' \item{Ve}{Frequentist covariance matrix}
 #' \item{Vp}{Bayesian covariance matrix}
-#' \item{Vc}{Bayesian covariance matrix corrected for smoothing parameter uncertainty}
+#' \item{Vc}{Bayesian covariance matrix corrected for smoothing parameter uncertainty (see Wood et al. 2016)}
 #' \item{Vc.approx}{Kass and Steffey approximation of \code{Vc} (see Wood et al. 2016)}
 #' \item{Z.smf}{List of matrices that represents the sum-to-zero constraint to apply for \code{\link{smf}} splines}
 #' \item{Z.tensor}{List of matrices that represents the sum-to-zero constraint to apply for \code{\link{tensor}} splines}
@@ -105,6 +105,7 @@ NULL
 #' \item{list.smf}{List of all \code{smf.smooth.spec} objects contained in the model}
 #' \item{list.tensor}{List of all \code{tensor.smooth.spec} objects contained in the model}
 #' \item{list.tint}{List of all \code{tint.smooth.spec} objects contained in the model}
+#' \item{list.rd}{List of all \code{rd.smooth.spec} objects contained in the model}
 #' \item{U.F}{Eigen vectors of S.F, useful for the initial reparameterization to separate penalized ad unpenalized subvectors. Allows stable evaluation of the log determinant of S and its derivatives}
 #' \item{factor.structure}{List containing the levels and classes of all factor variables present in the data frame used for fitting}
 #'
@@ -1366,13 +1367,13 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   }
 
   # indices of smooth terms
-  ind.smf <- grep("smf", tmp, fixed = TRUE)
+  ind.smf <- grep("^smf\\(", tmp)
 
-  ind.tensor <- grep("tensor", tmp, fixed = TRUE)
-
-  ind.tint <- grep("tint", tmp, fixed = TRUE)
+  ind.tensor <- grep("^tensor\\(", tmp)
   
-  ind.rd <- grep("rd", tmp, fixed = TRUE)
+  ind.tint <- grep("^tint\\(", tmp)
+  
+  ind.rd <- grep("^rd\\(", tmp)
 
   # names of smooth terms
   Ad <- tmp[ind.smf]
@@ -1898,13 +1899,13 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
   }
 
   # indices of smooth terms
-  ind.smf <- grep("smf", tmp, fixed = TRUE)
+  ind.smf <- grep("^smf\\(", tmp)
 
-  ind.tensor <- grep("tensor", tmp, fixed = TRUE)
-
-  ind.tint <- grep("tint", tmp, fixed = TRUE)
+  ind.tensor <- grep("^tensor\\(", tmp)
   
-  ind.rd <- grep("rd", tmp, fixed = TRUE)
+  ind.tint <- grep("^tint\\(", tmp)
+  
+  ind.rd <- grep("^rd\\(", tmp)
 
   # names of smooth terms
   Ad <- tmp[ind.smf]
@@ -3798,7 +3799,7 @@ predict.survPen <- function(object,newdata,n.legendre=50,conf.int=0.95,do.surv=T
 #' \item{call}{the original survPen call}
 #' \item{formula}{the original survPen formula}
 #' \item{coefficients}{reports the regression parameters estimates for unpenalized terms with the associated standard errors}
-#' \item{smooth.terms}{reports the edf associated with smooth terms}
+#' \item{edf.per.smooth}{reports the edf associated with each smooth term}
 #' \item{random}{TRUE if there are random effects in the model}
 #' \item{random.effects}{reports the estimates of the log standard deviation (log(sd)) of every random effects plus the estimated standard error (also on the log(sd) scale)}
 #' \item{likelihood}{unpenalized likelihood of the model}
@@ -3830,7 +3831,7 @@ summary.survPen <- function(object,...){
 		SE.rho <- NULL
 		TAB.random <- NULL
 		random <- FALSE
-		smooth.terms <- NULL
+		edf.per.smooth <- NULL
 		
 	}else{
 	
@@ -3843,10 +3844,20 @@ summary.survPen <- function(object,...){
 				type <- "penalized hazard model"
 			
 		}
-			
+		
+
 		# effective degrees of freedom of smooth terms
-		smooth.terms <- "a modifier"	
-			
+		edf.smooth <- object$edf[(object$df.para+1):length(object$edf)]
+		
+		name.edf <- names(edf.smooth)
+		
+		list.name <- sapply(1:length(name.edf),function(i) substr(name.edf[i],1,instr(name.edf[i],"\\.")-1))
+		
+		list.name <- factor(list.name,levels=unique(list.name)) # to preserve the order in names
+		
+		edf.per.smooth <- tapply(edf.smooth, list.name, sum)
+
+
 		if (is.null(object$optim.rho)){
 		
 			SE.rho <- NULL
@@ -3883,6 +3894,7 @@ summary.survPen <- function(object,...){
 			
 			}
 			
+			
 		}
 
 	}
@@ -3913,7 +3925,7 @@ summary.survPen <- function(object,...){
 			call=object$call,
 			formula=object$formula,
 			coefficients=TAB,
-			smooth.terms=smooth.terms,
+			edf.per.smooth=edf.per.smooth,
 			random=random,
 			random.effects=TAB.random,
 			likelihood = object$ll.unpen,
@@ -3984,6 +3996,10 @@ print.summary.survPen <- function(x, ...)
 		
 		cat("Smoothing parameter(s):\n")
 		print(x$smoothing.parameter)
+		
+		cat("\n")
+		cat("edf of smooth terms:\n")
+		print(x$edf.per.smooth)
 
 	}else{
 	

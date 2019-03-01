@@ -1,0 +1,11 @@
+survPen v1.0.1 
+==============
+
+Changes:
+
+* The description of list.rd was added to the help of SurvPenObject
+* Names of variables which included either « smf », « tensor », « tint » or « rd » were causing a failure. 
+  Functions model.cons and design.matrix were changed to fix the problem
+* edf per smooths were added in the summary
+
+
