@@ -182,18 +182,6 @@
  lines(new.time,pred1bis$surv,col="blue3")
  
  
- # no truncation vs truncation
- par(mfrow=c(1,2))
- plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="no truncation vs truncation",
- xlab="years since diagnosis",ylab="hazard")
- lines(new.time,pred2$haz,col="red")
- legend("topright",legend=c("no trunc","trunc"),col=c("black","red"),lty=c(1,1))
- 
- plot(new.time,pred1$surv,type="l",ylim=c(0,1),main="no truncation vs truncation",
- xlab="years since diagnosis",ylab="survival")
- lines(new.time,pred2$surv,col="red")
- 
- 
  # hazard vs excess hazard
  par(mfrow=c(1,2))
  plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="hazard vs excess hazard",

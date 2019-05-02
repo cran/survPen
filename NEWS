@@ -1,11 +1,12 @@
-survPen v1.0.1 
+survPen v1.1.0 
 ==============
 
 Changes:
 
-* The description of list.rd was added to the help of SurvPenObject
-* Names of variables which included either « smf », « tensor », « tint » or « rd » were causing a failure. 
-  Functions model.cons and design.matrix were changed to fix the problem
-* edf per smooths were added in the summary
+* includes a vignette called Survival_analysis_with_survPen that shows detailed examples of the package functionalities
+* examples 5 and 6 from the help page were deleted as they were clumsy. More detailed examples are available in the vignette Survival_analysis_with_survPen 
+* returns a convergence indicator (converged = TRUE or FALSE)
+* when using a factor by variable, same.rho=FALSE is used as default instead of same.rho=TRUE
+* function crs returns knots when intercept=FALSE
 
 

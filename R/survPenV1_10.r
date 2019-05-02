@@ -108,6 +108,7 @@ NULL
 #' \item{list.rd}{List of all \code{rd.smooth.spec} objects contained in the model}
 #' \item{U.F}{Eigen vectors of S.F, useful for the initial reparameterization to separate penalized ad unpenalized subvectors. Allows stable evaluation of the log determinant of S and its derivatives}
 #' \item{factor.structure}{List containing the levels and classes of all factor variables present in the data frame used for fitting}
+#' \item{converged}{convergence indicator, TRUE or FALSE. TRUE if Hess.beta.modif=FALSE and Hess.rho.modif=FALSE (or NULL)}
 #'
 #' @references
 #' Wood, S.N., Pya, N. and Saefken, B. (2016), Smoothing parameter and model selection for general smooth models (with discussion). Journal of the American Statistical Association 111, 1548-1575
@@ -380,7 +381,7 @@ crs <- function(x, knots=NULL,df=10, intercept=TRUE) {
   }
   
   if(intercept == FALSE) {
-    return(list(bs=b[,-1],pen=P.mat[-1,-1]))
+    return(list(bs=b[,-1],pen=P.mat[-1,-1],knots=knots))
   } else {
     return(list(bs=b,pen=P.mat,knots=knots))
   }
@@ -470,7 +471,7 @@ crs.FP <- function(knots,h){
 #' @param knots numeric vector that specifies the knots of the splines (including boundaries); default is NULL, in which case the knots are spread through the covariate values using quantiles. Precisely, for the term "smf(x,df=df1)", the vector of knots will be: quantile(unique(x),seq(0,1,length=df1))
 #' @param df numeric value that indicates the number of knots (or degrees of freedom) desired; default is NULL. If knots and df are NULL, df will be set to 10
 #' @param by numeric or factor variable in order to define a varying coefficient smooth
-#' @param same.rho if the specified by variable is a factor, specifies whether the smoothing parameters should be the same for all levels; default is TRUE.
+#' @param same.rho if the specified by variable is a factor, specifies whether the smoothing parameters should be the same for all levels; default is FALSE.
 #' @return object of class \code{smf.smooth.spec}, \code{tensor.smooth.spec} or \code{tint.smooth.spec}  (see \code{\link{smooth.spec}} for details)
 #'
 #' @export
@@ -515,7 +516,7 @@ crs.FP <- function(knots,h){
 #' # main effects are specified as penalized cubic regression splines
 #' formula.test <- ~smf(time,df=5)+smf(age,df=4)+tint(time,age,df=c(5,4))
 #'
-smf <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=TRUE){
+smf <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=FALSE){
 
 	by <- substitute(by)
 	
@@ -526,7 +527,7 @@ smf <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=TRUE){
 }
 
 #' @rdname smf
-tensor <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=TRUE){
+tensor <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=FALSE){
 
 	by <- substitute(by)
 	
@@ -537,7 +538,7 @@ tensor <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=TRUE){
 }
 
 #' @rdname smf
-tint <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=TRUE){
+tint <- function(..., knots=NULL,df=NULL,by=NULL,same.rho=FALSE){
 
 	by <- substitute(by)
 	
@@ -602,18 +603,18 @@ rd <- function(...){
 #' @param df Degrees of freedom: numeric vector that indicates the number of knots desired for each covariate; default is NULL
 #' @param by numeric or factor variable in order to define a varying coefficient smooth; default is NULL
 #' @param option "smf", "tensor" or "tint". Depends on the wrapper function; default is "smf"
-#' @param same.rho if there is a factor by variable, should the smoothing parameters be the same for all levels; default is TRUE.
+#' @param same.rho if there is a factor by variable, should the smoothing parameters be the same for all levels; default is FALSE.
 #' @return object of class smooth.spec
 #' \item{term}{Vector of strings giving the names of each covariate specified in ...}
 #' \item{dim}{Numeric value giving the number of covariates associated with this spline}
 #' \item{knots}{list of numeric vectors that specifies the knots for each covariate}
 #' \item{df}{Numeric vector giving the number of knots associated with each covariate}
 #' \item{by}{numeric or factor variable in order to define a varying coefficient smooth}
-#' \item{same.rho}{if there is a factor by variable, should the smoothing parameters be the same for all levels; default is TRUE}
+#' \item{same.rho}{if there is a factor by variable, should the smoothing parameters be the same for all levels; default is FALSE}
 #' \item{name}{simplified name of the call to function smooth.spec}
 #' @export
 #'
-smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=TRUE){
+smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=FALSE){
 
   if (is.null(option)) {
     option <- "smf"
@@ -735,7 +736,7 @@ smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=TRU
 #' @param by numeric or factor variable in order to define a varying coefficient smooth; default is NULL.
 #' @param option "smf", "tensor" or "tint".
 #' @param data.spec data frame that represents the environment from which the covariate values and knots are to be calculated; default is NULL.
-#' @param same.rho if there is a factor by variable, should the smoothing parameters be the same for all levels; default is TRUE.
+#' @param same.rho if there is a factor by variable, should the smoothing parameters be the same for all levels; default is FALSE.
 #' @param name simplified name of the smooth.spec call.
 #' @return List of objects with the following items:
 #' \item{X}{Design matrix}
@@ -751,7 +752,7 @@ smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=TRU
 #' \item{lambda.name}{name of the smoothing parameters}
 #' @export
 #'
-smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=TRUE, name){
+smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=FALSE, name){
 
   if (option=="rd"){
   
@@ -2332,7 +2333,7 @@ cor.var <- function(model){
 #' The \code{\link{survPen}} function implements the framework described by Wood et al. (2016) for modelling time-to-event data without requiring data splitting and Poisson likelihood approximation.
 #' The effects of continuous covariates are represented using low rank spline bases with associated quadratic penalties. The \code{\link{survPen}} function allows to account simultaneously for time-dependent effects, non-linear effects and
 #' interactions between several continuous covariates without the need to build a possibly demanding model-selection procedure.
-#' Besides LAML, a likelihood cross-validation (LCV) criterion (O’Sullivan 1988) can be used for smoothing parameter estimation.
+#' Besides LAML, a likelihood cross-validation (LCV) criterion (O Sullivan 1988) can be used for smoothing parameter estimation.
 #' First and second derivatives of LCV with respect to the smoothing parameters are implemented so that LCV optimization is computationally equivalent to the LAML optimization proposed by Wood et al. (2016).
 #' In practice, LAML optimization is generally both a bit faster and a bit more stable so it is used as default. 
 #' For \eqn{m} covariates \eqn{(x_1,\ldots,x_m)}, if we note \eqn{h(t,x_1,\ldots,x_m)} the hazard at time \eqn{t}, the hazard model is the following :
@@ -2347,27 +2348,30 @@ cor.var <- function(model){
 #'
 #' @section by variables:
 #' The \code{\link{smf}}, \code{\link{tensor}} and \code{\link{tint}} terms used to specify smooths accept an argument \code{by}. This \code{by} argument allows for building varying-coefficient models i.e. for letting
-#' smooths ‘interact’ with factors or parametric terms. If a \code{by} variable is numeric, then its ith element multiples the ith row of the model matrix corresponding to the smooth term concerned.
+#' smooths interact with factors or parametric terms. If a \code{by} variable is numeric, then its ith element multiples the ith row of the model matrix corresponding to the smooth term concerned.
 #' If a \code{by} variable is a factor then it generates an indicator vector for each level of the factor, unless it is an ordered factor. In the non-ordered case, the model matrix for the smooth term is then replicated 
 #' for each factor level, and each copy has its rows multiplied by the corresponding rows of its indicator variable. The smoothness penalties are also duplicated for each factor level. In short a different smooth is generated 
 #' for each factor level. The main interest of by variables over separated models is the \code{same.rho} argument (for \code{\link{smf}}, \code{\link{tensor}} and \code{\link{tint}}) which allows forcing all smooths to have the same smoothing parameter(s). 
-#' Ordered \code{by} variables are handled in the same way, except that no smooth is generated for the first level of the ordered factor. This is useful for setting up identifiable models when the same smooth occurs more than once 
-#' in a model, with different factor \code{by} variables. Be careful in that case because you will need to add a reference smooth to make the model identifiable. See example 5 below. 
+#' Ordered \code{by} variables are handled in the same way, except that no smooth is generated for the first level of the ordered factor. This is useful if you are interested in differences from a reference level.
+#'
+#' See the survival_analysis_with_survPen vignette for more details. 
 #' 
 #' @section Random effects:
 #' i.i.d random effects can be specified using penalization. Indeed, the ridge penalty is equivalent to an assumption that the regression parameters are i.i.d. normal random effects.
 #' Thus, it is easy to fit a frailty hazard model. For example, consider the model term \code{rd(clust)} which will result in a model matrix component corresponding to \code{model.matrix(~clust-1)} being added to the model matrix for the whole model. 
 #' The associated regression parameters are assumed i.i.d. normal, with unknown variance (to be estimated). This assumption is equivalent to an identity penalty matrix (i.e. a ridge penalty) on the regression parameters.
 #' The unknown smoothing parameter \eqn{\lambda} associated with the term \code{rd(clust)} is directly linked to the unknown variance \eqn{\sigma^2}: \eqn{\sigma^2 = \frac{1}{\lambda * S.scale}}.
-#' Then, the estimated log standard deviation is: \eqn{log(\hat{\sigma})=-0.5*log(\hat{\lambda})-0.5*log(S.scale)}. And the estimated variance of the log standard deviation is: \eqn{Var[log(\hat{\sigma})]=0.25*Var[log(\hat{\lambda})]=0.25*inv.Hess.rho}. See example 6 below.
-#' This approach allows implementing commonly used random effect structures. For example if \code{g} is a factor then \code{rd(g)} produces a random parameter for each level of g, the random parameters being i.i.d. normal. 
-#' If \code{g} is a factor and \code{x} is numeric, then \code{rd(x,g)} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}. If \code{h} is another factor then rd(h,g) produces the usual i.i.d. normal \code{g} - \code{h} interaction.
-#'
+#' Then, the estimated log standard deviation is: \eqn{log(\hat{\sigma})=-0.5*log(\hat{\lambda})-0.5*log(S.scale)}. And the estimated variance of the log standard deviation is: \eqn{Var[log(\hat{\sigma})]=0.25*Var[log(\hat{\lambda})]=0.25*inv.Hess.rho}.
+#' See the survival_analysis_with_survPen vignette for more details.
+#' This approach allows implementing commonly used random effect structures. For example if \code{g} is a factor then \code{rd(g)} produces a random parameter for each level of \code{g}, the random parameters being i.i.d. normal. 
+#' If \code{g} is a factor and \code{x} is numeric, then \code{rd(g,x)} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}.
 #' Thus, random effects treated as penalized splines allow specifying frailty (excess) hazard models (Charvat et al. 2016). For each individual i from cluster (usually geographical unit)  j, a possible model would be:
 #' \deqn{log[h(t_{ij},x_{ij1},\ldots,x_{ijm})]=\sum_k g_k(t_{ij},x_{ij1},\ldots,x_{ijm}) + w_j}
 #'
 #' where \code{w_j} follows a normal distribution with mean 0. The random effect associated with the cluster variable is specified with the model term \code{rd(cluster)}. We could also specify a random effect depending on age for example with the model term \code{rd(cluster,age)}.
 #' \code{u_j = exp(w_j)} is known as the shared frailty.
+#'
+#' See the survival_analysis_with_survPen vignette for more details.
 #'
 #' @section Excess hazard model:
 #' When studying the survival of patients who suffer from a common pathology we may be interested in the concept of excess mortality that represents the mortality due to that pathology. 
@@ -2423,7 +2427,7 @@ cor.var <- function(model){
 #'
 #' # predictions
 #'
-#' new.time <- seq(0,5,length=50)
+#' new.time <- seq(0,5,length=100)
 #' pred <- predict(mod,data.frame(fu=new.time))
 #' pred.pen <- predict(mod.pen,data.frame(fu=new.time))
 #'
@@ -2481,7 +2485,7 @@ cor.var <- function(model){
 #'
 #' # predictions of the models at age 60
 #'
-#' new.time <- seq(0,5,length=50)
+#' new.time <- seq(0,5,length=100)
 #' pred.cst <- predict(mod.cst,data.frame(fu=new.time))
 #' pred.pwcst <- predict(mod.pwcst,data.frame(fu=new.time))
 #' pred.lin <- predict(mod.lin,data.frame(fu=new.time))
@@ -2494,8 +2498,8 @@ cor.var <- function(model){
 #' 
 #' par(mfrow=c(1,1))
 #' plot(new.time,pred.cst$haz,type="l",ylim=c(0,0.2),main="hazard vs time",
-#' xlab="years since diagnosis",ylab="hazard",col="blue3",lwd=lwd1)
-#' segments(x0=new.time[1:49],x1=new.time[2:50],y0=pred.pwcst$haz[1:49],col="lightblue2",lwd=lwd1)
+#' xlab="time since diagnosis (years)",ylab="hazard",col="blue3",lwd=lwd1)
+#' segments(x0=new.time[1:99],x1=new.time[2:100],y0=pred.pwcst$haz[1:99],col="lightblue2",lwd=lwd1)
 #' lines(new.time,pred.lin$haz,col="green3",lwd=lwd1)
 #' lines(new.time,pred.lin.age$haz,col="yellow",lwd=lwd1)
 #' lines(new.time,pred.lin.inter.age$haz,col="orange",lwd=lwd1)
@@ -2573,31 +2577,20 @@ cor.var <- function(model){
 #' # LAML vs LCV
 #' par(mfrow=c(1,2))
 #' plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="LCV vs LAML",
-#' xlab="years since diagnosis",ylab="hazard")
+#' xlab="time since diagnosis (years)",ylab="hazard")
 #' lines(new.time,pred1bis$haz,col="blue3")
 #' legend("topright",legend=c("LAML","LCV"),col=c("black","blue3"),lty=c(1,1))
 #' 
 #' plot(new.time,pred1$surv,type="l",ylim=c(0,1),main="LCV vs LAML",
-#' xlab="years since diagnosis",ylab="survival")
+#' xlab="time since diagnosis (years)",ylab="survival")
 #' lines(new.time,pred1bis$surv,col="blue3")
 #' 
-#' 
-#' # no truncation vs truncation
-#' par(mfrow=c(1,2))
-#' plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="no truncation vs truncation",
-#' xlab="years since diagnosis",ylab="hazard")
-#' lines(new.time,pred2$haz,col="red")
-#' legend("topright",legend=c("no trunc","trunc"),col=c("black","red"),lty=c(1,1))
-#' 
-#' plot(new.time,pred1$surv,type="l",ylim=c(0,1),main="no truncation vs truncation",
-#' xlab="years since diagnosis",ylab="survival")
-#' lines(new.time,pred2$surv,col="red")
 #' 
 #' 
 #' # hazard vs excess hazard
 #' par(mfrow=c(1,2))
 #' plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="hazard vs excess hazard",
-#' xlab="years since diagnosis",ylab="hazard")
+#' xlab="time since diagnosis (years)",ylab="hazard")
 #' lines(new.time,pred3$haz,col="green3")
 #' legend("topright",legend=c("overall","excess"),col=c("black","green3"),lty=c(1,1))
 #' 
@@ -2610,7 +2603,7 @@ cor.var <- function(model){
 #' # see predict.survPen)
 #' par(mfrow=c(1,1))
 #' plot(new.time,pred1$haz,type="l",ylim=c(0,0.2),main="hazard vs excess hazard",
-#' xlab="years since diagnosis",ylab="hazard")
+#' xlab="time since diagnosis (years)",ylab="hazard")
 #' lines(new.time,pred3$haz,col="green3")
 #' legend("topright",legend=c("overall","excess"),col=c("black","green3"),lty=c(1,1))
 #' 
@@ -2661,9 +2654,9 @@ cor.var <- function(model){
 #' # plot the hazard surfaces for both models
 #' par(mfrow=c(1,2))
 #' persp(new.time,new.age,Z4,col=colors[facet(Z4)],main="tensor",theta=30,
-#' xlab="years since diagnosis",ylab="age at diagnosis",zlab="excess hazard",ticktype="detailed")
+#' xlab="time since diagnosis",ylab="age at diagnosis",zlab="excess hazard",ticktype="detailed")
 #' persp(new.time,new.age,Z5,col=colors[facet(Z5)],main="tint",theta=30,
-#' xlab="years since diagnosis",ylab="age at diagnosis",zlab="excess hazard",ticktype="detailed")
+#' xlab="time since diagnosis",ylab="age at diagnosis",zlab="excess hazard",ticktype="detailed")
 #' 
 #' #-------------------------------------------------------- example 4
 #' 
@@ -2693,195 +2686,13 @@ cor.var <- function(model){
 #' # plot the hazard surfaces for a given age
 #' par(mfrow=c(2,2))
 #' persp(new.time,new.year,Z_50,col=colors[facet(Z_50)],main="age 50",theta=20,
-#' xlab="years since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
+#' xlab="time since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
 #' persp(new.time,new.year,Z_60,col=colors[facet(Z_60)],main="age 60",theta=20,
-#' xlab="years since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
+#' xlab="time since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
 #' persp(new.time,new.year,Z_70,col=colors[facet(Z_70)],main="age 70",theta=20,
-#' xlab="years since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
+#' xlab="time since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
 #' persp(new.time,new.year,Z_80,col=colors[facet(Z_80)],main="age 80",theta=20,
-#' xlab="years since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
-#' 
-#' #-------------------------------------------------------- example 5
-#' 
-#' library(survPen)
-#' data(datCancer) # simulated dataset with 2000 individuals diagnosed with cervical cancer
-#'
-#' # excess hazard model with tensor product spline of time and age with a factor by variable
-#'
-#' #-------------- setting up stage variable. For example purposes only, of course here this
-#' # fake stage variable has no epidemiological value whatsoever
-#' don <- datCancer
-#' don$stage <- "medium"
-#' 
-#' set.seed(1)
-#' don$random <- runif(nrow(don))
-#' 
-#' don[don$random < 0.33,]$stage <- "low"
-#' don[don$random > 0.66,]$stage <- "high"
-#' 
-#' don$stage <- as.factor(don$stage)
-#' 
-#' 
-#' #-------------- separate data
-#' don.low <- don[don$stage=="low",]
-#' don.medium <- don[don$stage=="medium",]
-#' don.high <- don[don$stage=="high",]
-#' 
-#' #-------------- formula for separated models
-#' f5 <- ~tensor(fu,age)
-#' 
-#' #-------------- fitting separated models
-#' mod.low <- survPen(f5,data=don.low,t1=fu,event=dead,expected=rate)
-#' mod.medium <- survPen(f5,data=don.medium,t1=fu,event=dead,expected=rate)
-#' mod.high <- survPen(f5,data=don.high,t1=fu,event=dead,expected=rate)
-#' 
-#' #-------------- predictions with separated models
-#' newt <- seq(0,5,length=50)
-#' age1 <- 60
-#' 
-#' data.pred0 <- data.frame(fu=newt,age=age1)
-#' pred.low <- predict(mod.low,data.pred0)
-#' pred.medium <- predict(mod.medium,data.pred0)
-#' pred.high <- predict(mod.high,data.pred0)
-#' 
-#' par(mfrow=c(1,2))
-#' 
-#' plot(newt,pred.low$haz,type="l",col="blue3",ylim=c(0,0.15),
-#' ylab="excess hazard",xlab="time",main="separated models")
-#' lines(newt,pred.medium$haz,col="green")
-#' lines(newt,pred.high$haz,col="red")
-#' legend(0.5,0.04,c("low","medium","high"),lty=rep(1,3),col=c("blue3","green","red"))
-#' 
-#' #-------------- formula for unique model with by variable. The centering constraint is applied 
-#' # so we need to add the variable stage as a main effect too. The same smoothing parameters will
-#' # be used for each level of the variable (same.rho=TRUE).
-#' f6 <- ~ stage + tensor(fu,age,by=stage,same.rho=TRUE)
-#'
-#' f6.bis <- ~ stage + tensor(fu,age,by=stage,same.rho=FALSE)
-#' 
-#' #-------------- fitting unique model
-#' mod7 <- survPen(f6,data=don,t1=fu,event=dead,expected=rate)
-#' 
-#' mod7.bis <- survPen(f6.bis,data=don,t1=fu,event=dead,expected=rate)
-#'
-#' #-------------- predictions with unique model
-#' data.pred <- data.frame(fu=rep(newt,3),age=age1,stage=rep(c("low","medium","high"),each=50))
-#' 
-#' pred <- predict(mod7,data.pred)
-#' data.pred$haz <- pred$haz
-#' 
-#' plot(newt,data.pred[data.pred$stage=="low",]$haz,type="l",col="blue3",ylim=c(0,0.15),
-#' ylab="excess hazard",xlab="time",main="unique model")
-#' lines(newt,data.pred[data.pred$stage=="medium",]$haz,col="green")
-#' lines(newt,data.pred[data.pred$stage=="high",]$haz,col="red")
-#' 
-#' # If you plot the results from mod7.bis you will see that they are similar to those obtained 
-#' # with the separated models (but not identical) 
-#'
-#' #--------------- we could also have used an ordered factor and add a reference level smooth
-#'
-#' don$stage <- factor(don$stage,levels=c("low","medium","high"),ordered=TRUE)
-#'
-#' f.ordered <- ~ stage + tensor(fu,age) + tensor(age,fu,by=stage)
-#'
-#' # Here we must add the reference term "tensor(fu,age)" because stage is an ordered factor and
-#' # so the term "tensor(age,fu,by=stage)" does not create a smooth for the first level of stage.
-#'
-#' mod.ordered <- survPen(f.ordered,data=don,t1=fu,event=dead,expected=rate)
-#' 
-#' # Using ordered factors is very useful to specify models where the same smooths are
-#' # concerned by several factor by variables. For example:
-#'
-#' # we construct a new factor variable
-#' don$fac2 <- "level1"
-#'
-#' set.seed(30)
-#' don$random2 <- runif(nrow(don))
-#' 
-#' don[don$random2 > 0.5,]$fac2 <- "level2"
-#' 
-#' don$fac2 <- factor(don$fac2,levels=c("level1","level2"),ordered=TRUE)
-#'
-#' # So now we can specify a smooth of time for each level of stage (except the first one) and
-#' # for each level of fac2 (except the first one). The smooth associated with the first level
-#' # of stage and the first level of fac2 is the reference smooth smf(fu)
-#' f.ordered2 <- ~ stage + fac2 + smf(fu) + smf(fu,by=stage) + smf(fu,by=fac2)
-#' 
-#' mod.ordered2 <- survPen(f.ordered2,data=don,t1=fu,event=dead,expected=rate)
-#'
-#' #--------------------------------------------------------------------------------------------
-#' # hazard model with a continuous by variable
-#'
-#' # do not refrain to center continuous covariates to avoid convergence issues (especially when
-#' # said continuous covariates are used as by variables)
-#'
-#' don$agec <- don$age - 50
-#'
-#' # penalized cubic spline of time with linear interaction with age: 
-#' # log(h(fu,age))=f(fu) + age + g(fu)*age
-#'
-#' m <- survPen(~smf(fu) + smf(fu,by=agec),data=don,t1=fu,event=dead)
-#' m$ll
-#'
-#' # Another option to fit the same model
-#' m.bis <- survPen(~smf(fu) + agec + tint(fu,by=agec,df=10),data=don,t1=fu,event=dead)
-#' m.bis$ll # same penalized likelihood as m
-#' 
-#'
-#' # Be careful here. In m, the effect of age is included in the term smf(fu,by=agec) but in m.bis, the
-#' # term tint(fu,by=agec,df=10) is subjected to centering constraints and the effect of age
-#' # itself is not included and therefore must be added as a parametric term. tint 
-#' # is particularly useful when several smooths contain the same continuous by variable.
-#' # Be also careful when using tint instead of smf since the default df is not the same (5 vs 10).
-#'
-#' # penalized cubic spline of time, penlized cubic spline of age and penalized cubic spline 
-#' # of time with linear interaction with age : log(h(fu,age)) = f(fu) + g(age) + k(fu)*age
-#'
-#' m2 <- survPen(~tint(fu,df=10) + tint(agec,df=10) + tint(fu,by=agec,df=10),data=don,t1=fu,event=dead)
-#' m2$ll 
-#'
-#'
-#' #-------------------------------------------------------- example 6
-#' 
-#' library(survPen)
-#' data(datCancer) # simulated dataset with 2000 individuals diagnosed with cervical cancer
-#'
-#' # hazard model with tensor product spline of time and age with a random effect of cluster
-#'
-#' #-------------- setting up cluster variable (for example purposes only)
-#'
-#' list.clust <- seq(1,10) # there are 10 observed cluster levels
-#'
-#' set.seed(185)
-#' datCancer$clust <- sample(list.clust,dim(datCancer)[1],replace=TRUE)
-#'
-#' datCancer$clust <- factor(datCancer$clust,levels=list.clust)
-#'
-#' summary(datCancer$clust)
-#' 
-#' #-------------- fitting model
-#' # the model is : log(h(fu,age)) = tensor(fu,age) + w_j
-#' # where w_j denotes a gaussian random effect at the cluster level j. u_j = exp(w_j) is called 
-#' # the shared frailty
-#' form.frailty <- ~tensor(fu,age) + rd(clust)
-#' mod.frailty <- survPen(form.frailty,data=datCancer,t1=fu,event=dead)
-#' 
-#' summary(mod.frailty)
-#' # here, we have sd(w_j) = exp(-2.256382) = 0.1047287
-#' # you can retrieve it from the model like this
-#' exp(summary(mod.frailty)$random.effects)[1]
-#' # or like this
-#' exp(-0.5*log(mod.frailty$lambda)-0.5*log(mod.frailty$S.scale))[3]
-#'
-#' # 5-year survival for a 50 years patient in cluster 6
-#' predict(mod.frailty,data.frame(fu=5,age=50,clust=6))$surv
-#'
-#' # 5-year survival for a 50 years patient in cluster 10
-#' predict(mod.frailty,data.frame(fu=5,age=50,clust=10))$surv
-#'
-#' # 5-year survival for a 50 years patient when random effect is set to zero
-#' predict(mod.frailty,data.frame(fu=5,age=50,clust=10),exclude.random=TRUE)$surv
-#'
+#' xlab="time since diagnosis",ylab="yod",zlab="excess hazard",ticktype="detailed")
 #' 
 #' ########################################
 #'
@@ -2998,6 +2809,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 			# factor levels for prediction
 			model$factor.structure <- factor.structure
 			
+			# convergence
+			model$converged <- !(model$Hess.beta.modif | model$Hess.rho.modif)
+			
 			return(model)
 
 		}else{
@@ -3009,6 +2823,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 			# factor levels for prediction
 			model$factor.structure <- factor.structure
+			
+			# convergence
+			model$converged <- !(model$Hess.beta.modif)
 			
 			return(model)
 			
@@ -3031,6 +2848,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 		# factor levels for prediction
 		model$factor.structure <- factor.structure
 			
+		# convergence
+		model$converged <- !(model$Hess.beta.modif)
+		
 		return(model)
 		
 	}
@@ -3810,6 +3630,7 @@ predict.survPen <- function(object,newdata,n.legendre=50,conf.int=0.95,do.surv=T
 #' \item{edf}{effective degrees of freedom}
 #' \item{method}{smoothing selection criterion used (LAML or LCV)}
 #' \item{val.criterion}{minimized value of criterion. For LAML, what is reported is the negative log marginal likelihood}
+#' \item{converged}{convergence indicator, TRUE or FALSE. TRUE if Hess.beta.modif=FALSE and Hess.rho.modif=FALSE (or NULL)}
 #' @export
 #'
 summary.survPen <- function(object,...){
@@ -3935,7 +3756,8 @@ summary.survPen <- function(object,...){
 			parameters = object$p,
 			edf = sum(object$edf),
 			method = object$method,
-			criterion.val = object$criterion.val)
+			criterion.val = object$criterion.val,
+			converged = object$converged)
 	
 	attributes(res$smoothing.parameter) <- attrs
 	
@@ -4012,6 +3834,9 @@ print.summary.survPen <- function(x, ...)
 	}
 
 	cat("\n")
+	cat(paste("converged=",x$converged))
+
+	cat("\n")
 }
 
 #----------------------------------------------------------------------------------------------------------------
@@ -4079,6 +3904,12 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	betaold <- beta.ini
 	beta1 <- betaold
 
+	if (detail.beta){
+  
+	cat("---------------------------------------------------------------------------------------","\n",
+	"Beginning regression parameter estimation","\n","\n")
+	
+    }
 	# beginning of the while loop
 	while(abs(ll-llold)>tol.beta|any(abs((beta1-betaold)/betaold)>tol.beta))
 	{
@@ -4266,9 +4097,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 	if (detail.beta) {
 
-		cat("------------------","\n",
+		cat("\n",
 		"Beta optimization ok, ", k-1, "iterations","\n",
-		"------------------","\n")
+		"--------------------------------------------------------------------------------------","\n")
 
 	}
 
@@ -4329,11 +4160,12 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
   if (detail.rho){
   
-	cat("------------------------------------------------------------------------------------------","\n",
-	"Beginning smoothing parameter(s) selection via ",method," optimization","\n",
-    "------------------------------------------------------------------------------------------","\n","\n")
+	cat(
+	"_______________________________________________________________________________________","\n","\n",
+	"Beginning smoothing parameter estimation via ",method," optimization","\n",
+    "______________________________________________________________________________________","\n","\n")
 	
-    }
+  }
 
   while(abs(val-val.old)>tol.rho|any(abs(grad)>tol.rho))
   {
@@ -4369,6 +4201,16 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 	  }
 
+	  if (detail.rho){
+  
+		cat(
+		"--------------------","\n",
+		" Initial calculation","\n",
+		"-------------------","\n","\n"
+		)
+	
+	  }
+	
 	  model <- survPen.fit(build,data=data,formula=formula,max.it.beta=max.it.beta,beta.ini=beta.ini,detail.beta=detail.beta,method=method,tol.beta=tol.beta)
 	  beta1 <- model$coefficients
 	  iter.beta <- c(iter.beta,model$iter.beta)
@@ -4422,7 +4264,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 		
 		if (detail.rho) {
 		
-			cat("new step = ", signif(pas,3),"\n")
+			cat("\n","\n","new step = ", signif(pas,3),"\n")
 		
 		}
 		
@@ -4454,6 +4296,15 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 	}
 
+	
+	if (detail.rho){
+  
+		cat(
+		"\n","Smoothing parameter selection, iteration ",k.rho,"\n","\n"
+		)
+	
+	}
+	
 	model <- survPen.fit(build,data=data,formula=formula,max.it.beta=max.it.beta,beta.ini=beta1,detail.beta=detail.beta,method=method,tol.beta=tol.beta)
 	beta1 <- model$coefficients
 
@@ -4469,11 +4320,11 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 			if (detail.rho) {
 
-			cat("------------------------------------------------------------------------------------------","\n",
+			cat("---------------------------------------------------------------------------------------","\n",
 			"val= ", val," et val.old= ", val.old,"\n",
 			method," is not optimized at iteration ", k.rho,"\n",
 			"Step is divided by 10","\n",
-		    "------------------------------------------------------------------------------------------","\n","\n")
+		    "--------------------------------------------------------------------------------------","\n","\n")
 
 			}
 
@@ -4521,7 +4372,8 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 	# convergence details
     if (detail.rho){
-      cat("\n","iter ",method,": ",k.rho,"\n",
+      cat("_______________________________________________________________________________________","\n",
+		  "\n","iter ",method,": ",k.rho,"\n",
           "rho.old= ", round(rho.old,4),"\n",
           "rho= ", round(rho,4),"\n",
 		  "val.old= ", round(val.old,4),"\n",
@@ -4530,7 +4382,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 		  "gradient= ", signif(grad,2),"\n",
           "\n"
       )
-	  cat("------------------------------------------------------------------------------------------","\n")
+	  cat("_______________________________________________________________________________________","\n","\n","\n","\n")
     }
 
 	# next iteration
@@ -4541,7 +4393,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 	if (detail.rho) {
 
 	cat("Smoothing parameter(s) selection via ",method," ok, ", k.rho-1, "iterations","\n",
-    "------------------------------------------------------------------------------------------","\n")
+    "______________________________________________________________________________________","\n")
 
 	}
 
