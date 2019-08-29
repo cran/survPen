@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2019-05-02" />
+<meta name="date" content="2019-08-26" />
 
 <title>Survival analysis with survPen</title>
 
@@ -1566,7 +1566,7 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Survival analysis with survPen</h1>
-<h4 class="date">2019-05-02</h4>
+<h4 class="date">2019-08-26</h4>
 
 </div>
 
@@ -1577,21 +1577,21 @@ text-align: justify}
 </style>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>The <em>survPen</em> package was designed to fit hazard and excess hazard models with multidimensional penalized splines allowing for time-dependent effects, non-linear effects and interactions between several covariates (Fauvernier et al. 2019). The linear predictor in <em>survPen</em> is the logarithm of the (excess) hazard.</p>
+<p>The <code>survPen</code> package was designed to fit hazard and excess hazard models with multidimensional penalized splines allowing for time-dependent effects, non-linear effects and interactions between several covariates (Fauvernier et al. 2019). The linear predictor in <code>survPen</code> is the logarithm of the (excess) hazard.</p>
 <p>As the hazard function fully determines the distribution of the time-to-event, this modelling approach is actually well-suited for many time-to-event analyses: the splines provide the flexibility required for modelling the hazard and the penalty terms control this flexibility for smooth estimation. Excess hazard modelling (Estève et al. 1990, Remontet et al. 2007, Remontet et al. 2018) is linked to the concept of net survival (competitive risk setting), and can be useful in specific situations, for example to study the mortality associated with chronic diseases (e.g., cancer survival).</p>
-<p>The framework is very similar to that of the R <em>mgcv</em> package developed by Wood for generalized additive models; it allows including parametric smooth terms based on restricted cubic regression splines as marginal bases, associated with penalties on the second derivative. Multidimensional smoothers are based on tensor product splines, i.e. a term-by-term multiplication of the marginal bases. Smoothing parameters are estimated automatically by optimizing either the Laplace approximate marginal likelihood (LAML) or the likelihood cross-validation criterion (LCV).</p>
-<p>The user must be aware that the <em>survPen</em> package is independent of the <em>mgcv</em> package and that some functionalities available in <em>mgcv</em> in terms of types of splines (such as thin plate regression splines or P-splines) are not available in <em>survPen</em> (yet).</p>
-<p>In <em>survPen</em>, the linear predictor, i.e. the log-hazard function, is fully and explicitly specified by the model’s formula, including the baseline hazard and all time-dependent effects. Thus, time-dependent effects are naturally specified as interactions with functions of time.</p>
-<p>The main functions of the <em>survPen</em> package are <em>survPen</em>, <em>smf</em>, <em>tensor</em>, <em>tint</em> and <em>rd</em>. The <em>survPen</em> function fits the model specified in the <em>formula</em> argument. The functions <em>smf</em>, <em>tensor</em>, <em>tint</em> are used to define penalized splines within this <em>formula</em>. Finally, <em>rd</em> allows including random effects in the linear predictor.</p>
-<p>Unpenalized terms can also be incorporated in <em>survPen</em> formulae, just as one would specify the terms of a linear predictor in a <em>glm</em> formula. The <em>survPen</em> package thus allows to easily define and fit various hazard models. As an example, analyses performed using the <em>coxph</em> function of the <em>survival</em> package, to fit a Cox proportional hazard model, may readily be improved using the <em>survPen</em> package by adding a penalized spline to model the baseline hazard: in addition to the hazard ratio estimates, the user would then obtain a smooth estimate of the baseline hazard as well as smooth survival curves estimates.</p>
+<p>The framework is very similar to that of the R <code>mgcv</code> package developed by Wood for generalized additive models; it allows including parametric smooth terms based on restricted cubic regression splines as marginal bases, associated with penalties on the second derivative. Multidimensional smoothers are based on tensor product splines, i.e. a term-by-term multiplication of the marginal bases. Smoothing parameters are estimated automatically by optimizing either the Laplace approximate marginal likelihood (LAML) or the likelihood cross-validation criterion (LCV).</p>
+<p>The user must be aware that the <code>survPen</code> package is independent of the <code>mgcv</code> package and that some functionalities available in <code>mgcv</code> in terms of types of splines (such as thin plate regression splines or P-splines) are not available in <code>survPen</code> (yet).</p>
+<p>In <code>survPen</code>, the linear predictor, i.e. the log-hazard function, is fully and explicitly specified by the model’s formula, including the baseline hazard and all time-dependent effects. Thus, time-dependent effects are naturally specified as interactions with functions of time.</p>
+<p>The main functions of the <code>survPen</code> package are <code>survPen</code>, <code>smf</code>, <code>tensor</code>, <code>tint</code> and <code>rd</code>. The <code>survPen</code> function fits the model specified in the <code>formula</code> argument. The functions <code>smf</code>, <code>tensor</code>, <code>tint</code> are used to define penalized splines within this <code>formula</code>. Finally, <code>rd</code> allows including random effects in the linear predictor.</p>
+<p>Unpenalized terms can also be incorporated in <code>survPen</code> formulae, just as one would specify the terms of a linear predictor in a <code>glm</code> formula. The <code>survPen</code> package thus allows to easily define and fit various hazard models. As an example, analyses performed using the <code>coxph</code> function of the <code>survival</code> package, to fit a Cox proportional hazard model, may readily be improved using the <code>survPen</code> package by adding a penalized spline to model the baseline hazard: in addition to the hazard ratio estimates, the user would then obtain a smooth estimate of the baseline hazard as well as smooth survival curves estimates.</p>
 <div id="details" class="section level3">
 <h3>Details</h3>
-<p>In time-to-event analysis, we may deal with one or several covariates whose functional forms, time-dependent effects and interaction structure are challenging to specify. In this context, penalized hazard models represent an interesting tool (Kauermann 2005, Kneib and Fahrmeir 2007, Remontet et al. 2018). One possible way to implement such penalized models is to use the classical approximation of the survival likelihood by a Poisson likelihood by artificially splitting the data. The package <em>mgcv</em> can then be used to fit penalized hazard models (Remontet et al. 2018). The problem with this option is that the setup is rather complex and the method cannot be used on very large datasets for computational reasons.</p>
+<p>In time-to-event analysis, we may deal with one or several covariates whose functional forms, time-dependent effects and interaction structure are challenging to specify. In this context, penalized hazard models represent an interesting tool (Kauermann 2005, Kneib and Fahrmeir 2007, Remontet et al. 2018). One possible way to implement such penalized models is to use the classical approximation of the survival likelihood by a Poisson likelihood by artificially splitting the data. The package <code>mgcv</code> can then be used to fit penalized hazard models (Remontet et al. 2018). The problem with this option is that the setup is rather complex and the method cannot be used on very large datasets for computational reasons.</p>
 <p>Wood et al. (2016) provided a general penalized framework that made available smooth function estimation to a wide variety of models. They proposed to estimate smoothing parameters by maximizing a Laplace approximate marginal likelihood (LAML) criterion and demonstrate how statistical consistency is maintained by doing so.</p>
-<p>The <em>survPen</em> function implements the framework described by Wood et al. (2016) for modelling time-to-event data. The effects of continuous covariates are represented using low rank spline bases associated with penalties on the second derivative (penalty terms are quadratic in the regression parameters in this case). The <em>survPen</em> function allows to account simultaneously for time-dependent effects, non-linear effects and interactions between several continuous covariates without the need to build a possibly demanding model-selection procedure. In addition to LAML, the likelihood cross-validation (LCV) criterion (O’Sullivan 1988) can be used for smoothing parameter estimation.</p>
-<p>A key feature of <em>survPen</em> is that the optimization of LCV and LAML relies on their first and second derivatives with respect to the smoothing parameters; this makes the optimization procedure fast and stable. The estimation procedure follows the optimization scheme proposed by Wood et al. (2016); it is based on two nested Newton-Raphson algorithms, an outer Newton-Raphson iterations for the smoothing parameters and an inner Newton-Raphson iterations for the regression parameters. Estimation of the regression parameters in the inner algorithm is performed maximizing directly the penalized likelihood of the survival model, therefore avoiding data augmentation and Poisson likelihood approximation.</p>
-<p>In practice, LAML optimization is generally both a bit faster and a bit more stable and is thus the default option in <em>survPen</em>. For <span class="math inline">\(m\)</span> covariates <span class="math inline">\((x_1,\ldots,x_m)\)</span>, if we note <span class="math inline">\(h(t,x_1,\ldots,x_m)\)</span> the hazard at time <span class="math inline">\(t\)</span>, the hazard model is the following : <span class="math display">\[log[h(t,x_1,\ldots,x_m)]=\sum_j g_j(t,x_1,\ldots,x_m) \]</span></p>
-<p>where each <span class="math inline">\(g_j\)</span> is either the marginal basis of a specific covariate or a tensor product smooth of any number of covariates. The marginal bases of the covariates are represented as natural (or restricted) cubic splines (as in function <em>ns</em> from library <em>splines</em>) with associated quadratic penalties. Full parametric (unpenalized) terms for the effects of covariates are also possible (see the examples below). Each <span class="math inline">\(g_j\)</span> is then associated with zero, one or several smoothing parameters. The cumulative hazard included in the log-likelihood is approximated by Gauss-Legendre quadrature for numerical stability.</p>
+<p>The <code>survPen</code> function implements the framework described by Wood et al. (2016) for modelling time-to-event data. The effects of continuous covariates are represented using low rank spline bases associated with penalties on the second derivative (penalty terms are quadratic in the regression parameters in this case). The <code>survPen</code> function allows to account simultaneously for time-dependent effects, non-linear effects and interactions between several continuous covariates without the need to build a possibly demanding model-selection procedure. In addition to LAML, the likelihood cross-validation (LCV) criterion (O’Sullivan 1988) can be used for smoothing parameter estimation.</p>
+<p>A key feature of <code>survPen</code> is that the optimization of LCV and LAML relies on their first and second derivatives with respect to the smoothing parameters; this makes the optimization procedure fast and stable. The estimation procedure follows the optimization scheme proposed by Wood et al. (2016); it is based on two nested Newton-Raphson algorithms, an outer Newton-Raphson iterations for the smoothing parameters and an inner Newton-Raphson iterations for the regression parameters. Estimation of the regression parameters in the inner algorithm is performed maximizing directly the penalized likelihood of the survival model, therefore avoiding data augmentation and Poisson likelihood approximation.</p>
+<p>In practice, LAML optimization is generally both a bit faster and a bit more stable and is thus the default option in <code>survPen</code>. For <span class="math inline">\(m\)</span> covariates <span class="math inline">\((x_1,\ldots,x_m)\)</span>, if we note <span class="math inline">\(h(t,x_1,\ldots,x_m)\)</span> the hazard at time <span class="math inline">\(t\)</span>, the hazard model is the following : <span class="math display">\[log[h(t,x_1,\ldots,x_m)]=\sum_j g_j(t,x_1,\ldots,x_m) \]</span></p>
+<p>where each <span class="math inline">\(g_j\)</span> is either the marginal basis of a specific covariate or a tensor product smooth of any number of covariates. The marginal bases of the covariates are represented as natural (or restricted) cubic splines (as in function <code>ns</code> from library <code>splines</code>) with associated quadratic penalties. Full parametric (unpenalized) terms for the effects of covariates are also possible (see the examples below). Each <span class="math inline">\(g_j\)</span> is then associated with zero, one or several smoothing parameters. The cumulative hazard included in the log-likelihood is approximated by Gauss-Legendre quadrature for numerical stability.</p>
 <p>The method is detailed in Fauvernier et al. (in revision in the Journal of the Royal Statistical Society series C).</p>
 </div>
 </div>
@@ -1706,7 +1706,7 @@ knitr::kable(head(datCancer,10))</code></pre>
 </div>
 <div id="getting-started" class="section level1">
 <h1>Getting started</h1>
-<p>The model specification should seem natural for users familiar with the <em>glm</em> formulation, because the linear predictor is fully and explicitly specified by the model’s formula. In addition to specifiying the time (argument <em>t1</em>) and event variable (argument <em>event</em>), the user only needs to provide one formula object starting with the symbol “~” followed by the functional forms of the different covariates and time. Nothing is specified on the left of the formula since the linear predictor scale is implicit (log-hazard or log-excess hazard).</p>
+<p>The model specification should seem natural for users familiar with the <code>glm</code> formulation, because the linear predictor is fully and explicitly specified by the model’s formula. In addition to specifiying the time (argument <code>t1</code>) and event variable (argument <code>event</code>), the user only needs to provide one formula object starting with the symbol “~” followed by the functional forms of the different covariates and time. Nothing is specified on the left of the formula since the linear predictor scale is implicit (log-hazard or log-excess hazard).</p>
 <p>Suppose that we are only interested in the effect of the time elapsed since diagnosis on the hazard. Examples of models fitted on the log-hazard scale are shown below:</p>
 <div id="constant-hazard-model" class="section level3">
 <h3>Constant hazard model</h3>
@@ -1732,7 +1732,7 @@ mod.lin &lt;- survPen(f.lin,data=datCancer,t1=fu,event=dead)</code></pre>
 <h3>Restricted cubic splines</h3>
 <p><span class="math display">\[ log[h(t)] = f(t) \]</span></p>
 <p>where <span class="math inline">\(f\)</span> is a restricted cubic splines (linear beyond the boundary knots) with interior knots 0.25, 0.5, 1, 2 and 4 and boundary knots 0 and 5.</p>
-<p>Using the <em>splines</em> package, we can specify the model as follows</p>
+<p>Using the <code>splines</code> package, we can specify the model as follows</p>
 <pre class="r"><code>library(splines)
 
 f.rcs &lt;- ~ns(fu,knots=c(0.25, 0.5, 1, 2, 4),Boundary.knots=c(0,5))
@@ -1744,7 +1744,7 @@ mod.rcs &lt;- survPen(f.rcs,data=datCancer,t1=fu,event=dead)</code></pre>
 <p>We use the same design as before but add a penalty term that controls the smoothness of the fitted curve</p>
 <p><span class="math display">\[ log[h(t)] = s(t) \]</span></p>
 <p>where <span class="math inline">\(s\)</span> is a <strong>penalized</strong> restricted cubic splines with interior knots 0.25, 0.5, 1, 2 and 4 and boundary knots 0 and 5.</p>
-<p>Using the <em>smf</em> (stands for <em>smooth function</em>) function within the <em>survPen</em> package</p>
+<p>Using the <code>smf</code> (stands for <em>smooth function</em>) function within the <code>survPen</code> package</p>
 <pre class="r"><code>f.pen &lt;- ~ smf(fu,knots=c(0,0.25, 0.5, 1, 2, 4,5)) # careful here: the boundary knots are included
 
 mod.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead)</code></pre>
@@ -1796,7 +1796,7 @@ lines(new.time,pred.pen$surv.sup,lty=2)</code></pre>
 </div>
 <div id="making-your-own-predictions" class="section level3">
 <h3>Making your own predictions</h3>
-<p>Besides the basics hazard and survival predictions, the user may use the predict function to retrieve directly the design matrix corresponding to the new dataset specified. This functionality is available via the “type = lpmatrix” argument. This feature is particularly useful if the user wants to calculate the predictions from the model on a arbitrary scale (beyond hazard, cumulative hazard and survival).</p>
+<p>Besides the basics hazard and survival predictions, the user may use the predict function to retrieve directly the design matrix corresponding to the new dataset specified. This functionality is available via the <code>type = lpmatrix</code> argument. This feature is particularly useful if the user wants to calculate the predictions from the model on a arbitrary scale (beyond hazard, cumulative hazard and survival).</p>
 <pre class="r"><code># you can also calculate the hazard yourself with the lpmatrix option.
 # For example, compare the following predictions:
 haz.pen &lt;- pred.pen$haz
@@ -1827,30 +1827,59 @@ summary(haz.sup - pred.pen$haz.sup)
 <h3>Summary of the model</h3>
 <p>Let’s look at the summary of <em>mod.pen</em></p>
 <pre class="r"><code>summary(mod.pen)
-#&gt; penalized hazard model 
-#&gt;  
-#&gt; Call:
+#&gt; $type
+#&gt; [1] &quot;penalized hazard model&quot;
+#&gt; 
+#&gt; $call
 #&gt; survPen(formula = f.pen, data = datCancer, t1 = fu, event = dead)
 #&gt; 
-#&gt; Coefficients:
-#&gt;             Estimate Std. Error z value  Pr(&gt;|z|)    
-#&gt; (Intercept) -3.04226    0.12344 -24.645 &lt; 2.2e-16 ***
-#&gt; ---
-#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; $formula
+#&gt; ~smf(fu, knots = c(0, 0.25, 0.5, 1, 2, 4, 5))
 #&gt; 
-#&gt; likelihood= -2320.85 , penalized likelihood= -2321.66
-#&gt; Number of parameters= 7 , effective degrees of freedom= 3.6549
-#&gt; LAML = 2326.26 
-#&gt;  
-#&gt; Smoothing parameter(s):
-#&gt;  smf(fu) 
-#&gt; 1690.498 
+#&gt; $coefficients
+#&gt;              Estimate Std. Error   z value      Pr(&gt;|z|)
+#&gt; (Intercept) -3.042261  0.1234448 -24.64471 4.193984e-134
 #&gt; 
-#&gt; edf of smooth terms:
+#&gt; $edf.per.smooth
 #&gt;  smf(fu) 
 #&gt; 2.654904 
 #&gt; 
-#&gt; converged= TRUE</code></pre>
+#&gt; $random
+#&gt; [1] FALSE
+#&gt; 
+#&gt; $random.effects
+#&gt; NULL
+#&gt; 
+#&gt; $likelihood
+#&gt; [1] -2320.848
+#&gt; 
+#&gt; $penalized.likelihood
+#&gt; [1] -2321.659
+#&gt; 
+#&gt; $nb.smooth
+#&gt; [1] 1
+#&gt; 
+#&gt; $smoothing.parameter
+#&gt;  smf(fu) 
+#&gt; 1690.498 
+#&gt; 
+#&gt; $parameters
+#&gt; [1] 7
+#&gt; 
+#&gt; $edf
+#&gt; [1] 3.654904
+#&gt; 
+#&gt; $method
+#&gt; [1] &quot;LAML&quot;
+#&gt; 
+#&gt; $criterion.val
+#&gt; [1] 2326.262
+#&gt; 
+#&gt; $converged
+#&gt; [1] TRUE
+#&gt; 
+#&gt; attr(,&quot;class&quot;)
+#&gt; [1] &quot;summary.survPen&quot;</code></pre>
 <p>Here we get:</p>
 <ul>
 <li>the log-likelihood: -2320.847587</li>
@@ -1864,7 +1893,7 @@ summary(haz.sup - pred.pen$haz.sup)
 <p>All these values can respectively be retrieved as follows:</p>
 <pre class="r"><code>mod.pen$ll.unpen
 #&gt; [1] -2320.848
-mod.pen$ll
+mod.pen$ll.pen
 #&gt; [1] -2321.659
 mod.pen$p
 #&gt; [1] 7
@@ -1904,7 +1933,7 @@ summary(mod.pen)$edf.per.smooth
 </div>
 <div id="smoothing-parameter-estimation" class="section level1">
 <h1>Smoothing parameter estimation</h1>
-<p>The <em>survPen</em> package offers two criteria to estimate the smoothing parameters: LCV for Likelihood Cross Validation and LAML for Laplace Approximate Marginal Likelihood.</p>
+<p>The <code>survPen</code> package offers two criteria to estimate the smoothing parameters: LCV for Likelihood Cross Validation and LAML for Laplace Approximate Marginal Likelihood.</p>
 <pre class="r"><code>f1 &lt;- ~smf(fu)
 
 mod.LCV &lt;- survPen(f1,data=datCancer,t1=fu,event=dead,expected=NULL,method=&quot;LCV&quot;)
@@ -1952,7 +1981,7 @@ plot(rho.vec,LAML,type=&quot;l&quot;,main=&quot;LAML vs log(lambda)&quot;,ylab=&
 <h1>Knots location</h1>
 <p>Unidimensional penalized spline for time since diagnosis with 5 knots</p>
 <pre class="r"><code>f1 &lt;- ~smf(fu,df=5)</code></pre>
-<p>When knots are not specified, <em>survPen</em> places them using quantiles. For example, for the term <em>smf(x,df=df1)</em>, the vector of knots will be: <em>quantile(unique(x),seq(0,1,length=df1))</em></p>
+<p>When knots are not specified, <code>survPen</code> places them using quantiles. For example, for the term <code>smf(x,df=df1)</code>, the vector of knots will be: <code>quantile(unique(x),seq(0,1,length=df1))</code></p>
 <p>In this case, we have</p>
 <pre class="r"><code>df1 &lt;- 5
 quantile(unique(datCancer$fu),seq(0,1,length=df1)) 
@@ -1970,7 +1999,7 @@ mod1$list.smf
 #&gt; [1] 1
 #&gt; 
 #&gt; $knots
-#&gt; $knots[[1]]
+#&gt; $knots$fu
 #&gt;          0%         25%         50%         75%        100% 
 #&gt; 0.001455958 0.732075578 1.425060350 2.570586727 5.000000000 
 #&gt; 
@@ -1994,7 +2023,7 @@ mod1$list.smf
 </div>
 <div id="excess-hazard-models" class="section level1">
 <h1>Excess hazard models</h1>
-<p>One important feature of the <em>survPen</em> package is that it allows fitting penalized excess hazard models.</p>
+<p>One important feature of the <code>survPen</code> package is that it allows fitting penalized excess hazard models.</p>
 <p>Excess mortality is a very useful concept that allows estimating the mortality due to a specific disease as the excess mortality as compared to the expected mortality if the studied population did not have the disease. Excess mortality is estimated from all-cause deaths in the studied-population and has two advantages: i) it does not require knowing the cause of death, which may be unavailable and/or unreliable and ii) it accounts for indirect long-term side-effects, such as treatment toxicities, weakening preventing physical activity, weight gains, etc…The expected mortality from other causes is an external data, referred to as the expected mortality <span class="math inline">\(h_P\)</span>; it is usually taken as the general population all-cause mortality, assuming the studied population have similar mortality as the general population and that mortality form the disease is negligible in all-cause mortality.</p>
 <p>The excess mortality is directly linked to the concept of net survival, which is the survival that would be observed if patients could not die from other causes. Flexible excess hazard models have already been proposed (for examples see Remontet et al. 2007, Charvat et al. 2016) but none of them deals with a penalized framework (outside a Bayesian setting, Hennerfeind et al. 2008).</p>
 <p>The mortality (all causes) observed in the patients (<span class="math inline">\(h_O\)</span>) is actually decomposed as the sum of the expected mortality <span class="math inline">\(h_P\)</span> and the excess mortality due to the pathology (<span class="math inline">\(h_E\)</span>).</p>
@@ -2027,15 +2056,15 @@ legend(&quot;bottomleft&quot;,legend=c(&quot;overall survival&quot;,&quot;net su
 </div>
 <div id="tensor-product-splines" class="section level1">
 <h1>Tensor product splines</h1>
-<p>Tensor product splines represent the key functionality of the <em>survPen</em> package. Indeed, they allow us jointly modelling non-linearity, time-dependency and interactions. Two constructors can be used :</p>
+<p>Tensor product splines represent the key functionality of the <code>survPen</code> package. Indeed, they allow us jointly modelling non-linearity, time-dependency and interactions. Two constructors can be used :</p>
 <ul>
-<li><em>tensor</em>, in which the number of associated smoothing parameters equals the number of covariates involved. This is similar to <em>te</em> in the <em>mgcv</em> package.</li>
-<li><em>tint</em>, which leads to the very same design as <em>tensor</em> but decomposes the penalty terms into a main effect part and an interaction part (this is called ANOVA decoposition of smooths, see Wood 2006). This is similar to <em>ti</em> in the <em>mgcv</em> package.</li>
+<li><code>tensor</code>, in which the number of associated smoothing parameters equals the number of covariates involved. This is similar to <code>te</code> in the <code>mgcv</code> package.</li>
+<li><code>tint</code>, which leads to the very same design as <code>tensor</code> but decomposes the penalty terms into a main effect part and an interaction part (this is called ANOVA decoposition of smooths, see Wood 2006). This is similar to <code>ti</code> in the <code>mgcv</code> package.</li>
 </ul>
-<p>The <em>tensor</em> approach allows specifying models like this one: <span class="math display">\[ log[h(t,age)]= f(t,age) \]</span></p>
+<p>The <code>tensor</code> approach allows specifying models like this one: <span class="math display">\[ log[h(t,age)]= f(t,age) \]</span></p>
 <p>where <span class="math inline">\(f\)</span> is a tensor product spline associated with two smoothing parameters, one for each direction. However, this construction makes the assumption that the main effect of each covariate has the same complexity as its associated effect in the interaction term.</p>
-<p>The <em>tint</em> approach relaxes this assumption. Indeed, the model would become: <span class="math display">\[ log[h(t,age)]= f(t) + g(age) + k(t,age) \]</span></p>
-<p>where <span class="math inline">\(f\)</span> is associated with one smoothing parameter, <span class="math inline">\(g\)</span> is associated with one smoothing parameter and <span class="math inline">\(k\)</span> is associated with two smoothing parameters. In total we thus have four smoothing parameters in this case but the design is the same as before. Of course, the <em>tint</em> approach rapidly reaches its limits in terms of complexity when the number of covariates rises. Indeed, for example, with three covariates, while the <em>tensor</em> approach is associated with three smoothing parameters, the fully decomposed <em>tint</em> approach leads to twelve smoothing parameters to estimate.</p>
+<p>The <code>tint</code> approach relaxes this assumption. Indeed, the model would become: <span class="math display">\[ log[h(t,age)]= f(t) + g(age) + k(t,age) \]</span></p>
+<p>where <span class="math inline">\(f\)</span> is associated with one smoothing parameter, <span class="math inline">\(g\)</span> is associated with one smoothing parameter and <span class="math inline">\(k\)</span> is associated with two smoothing parameters. In total we thus have four smoothing parameters in this case but the design is the same as before. Of course, the <code>tint</code> approach rapidly reaches its limits in terms of complexity when the number of covariates rises. Indeed, for example, with three covariates, while the <code>tensor</code> approach is associated with three smoothing parameters, the fully decomposed <code>tint</code> approach leads to twelve smoothing parameters to estimate.</p>
 <div id="two-dimensions" class="section level3">
 <h3>Two dimensions</h3>
 <p>The models presented here are a tensor product smooth and a tensor product interaction (Wood 2006) of time since diagnosis and age at diagnosis. Smoothing parameters are estimated via LAML.</p>
@@ -2046,57 +2075,116 @@ f.tint &lt;- ~tint(fu,df=5)+tint(age,df=5)+tint(fu,age,df=c(5,5))
 # hazard model
 mod.tensor &lt;- survPen(f.tensor,data=datCancer,t1=fu,event=dead)
 summary(mod.tensor)
-#&gt; penalized hazard model 
-#&gt;  
-#&gt; Call:
+#&gt; $type
+#&gt; [1] &quot;penalized hazard model&quot;
+#&gt; 
+#&gt; $call
 #&gt; survPen(formula = f.tensor, data = datCancer, t1 = fu, event = dead)
 #&gt; 
-#&gt; Coefficients:
-#&gt;             Estimate Std. Error z value  Pr(&gt;|z|)    
-#&gt; (Intercept) -3.31334    0.17612 -18.813 &lt; 2.2e-16 ***
-#&gt; ---
-#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; $formula
+#&gt; ~tensor(fu, age, df = c(5, 5))
 #&gt; 
-#&gt; likelihood= -2106.15 , penalized likelihood= -2110
-#&gt; Number of parameters= 25 , effective degrees of freedom= 11.6904
-#&gt; LAML = 2121.7 
-#&gt;  
-#&gt; Smoothing parameter(s):
-#&gt; tensor(fu,age).1 tensor(fu,age).2 
-#&gt;        0.7792689       21.6699606 
+#&gt; $coefficients
+#&gt;              Estimate Std. Error   z value    Pr(&gt;|z|)
+#&gt; (Intercept) -3.313336  0.1761197 -18.81298 5.91178e-79
 #&gt; 
-#&gt; edf of smooth terms:
+#&gt; $edf.per.smooth
 #&gt; tensor(fu,age) 
 #&gt;       10.69041 
 #&gt; 
-#&gt; converged= TRUE
+#&gt; $random
+#&gt; [1] FALSE
+#&gt; 
+#&gt; $random.effects
+#&gt; NULL
+#&gt; 
+#&gt; $likelihood
+#&gt; [1] -2106.152
+#&gt; 
+#&gt; $penalized.likelihood
+#&gt; [1] -2110.003
+#&gt; 
+#&gt; $nb.smooth
+#&gt; [1] 2
+#&gt; 
+#&gt; $smoothing.parameter
+#&gt; tensor(fu,age).1 tensor(fu,age).2 
+#&gt;        0.7792689       21.6699606 
+#&gt; 
+#&gt; $parameters
+#&gt; [1] 25
+#&gt; 
+#&gt; $edf
+#&gt; [1] 11.69041
+#&gt; 
+#&gt; $method
+#&gt; [1] &quot;LAML&quot;
+#&gt; 
+#&gt; $criterion.val
+#&gt; [1] 2121.695
+#&gt; 
+#&gt; $converged
+#&gt; [1] TRUE
+#&gt; 
+#&gt; attr(,&quot;class&quot;)
+#&gt; [1] &quot;summary.survPen&quot;
 
 mod.tint &lt;- survPen(f.tint,data=datCancer,t1=fu,event=dead)
 summary(mod.tint)
-#&gt; penalized hazard model 
-#&gt;  
-#&gt; Call:
+#&gt; $type
+#&gt; [1] &quot;penalized hazard model&quot;
+#&gt; 
+#&gt; $call
 #&gt; survPen(formula = f.tint, data = datCancer, t1 = fu, event = dead)
 #&gt; 
-#&gt; Coefficients:
-#&gt;             Estimate Std. Error z value  Pr(&gt;|z|)    
-#&gt; (Intercept) -3.23237    0.15164 -21.316 &lt; 2.2e-16 ***
-#&gt; ---
-#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; $formula
+#&gt; ~tint(fu, df = 5) + tint(age, df = 5) + tint(fu, age, df = c(5, 
+#&gt;     5))
 #&gt; 
-#&gt; likelihood= -2106.39 , penalized likelihood= -2109.6
-#&gt; Number of parameters= 25 , effective degrees of freedom= 10.462
-#&gt; LAML = 2122.7 
-#&gt;  
-#&gt; Smoothing parameter(s):
-#&gt;       tint(fu)      tint(age) tint(fu,age).1 tint(fu,age).2 
-#&gt;   9.405365e-01   6.451661e+00   1.830722e-01   1.279995e+05 
+#&gt; $coefficients
+#&gt;              Estimate Std. Error   z value      Pr(&gt;|z|)
+#&gt; (Intercept) -3.232368  0.1516431 -21.31563 8.130486e-101
 #&gt; 
-#&gt; edf of smooth terms:
+#&gt; $edf.per.smooth
 #&gt;     tint(fu)    tint(age) tint(fu,age) 
 #&gt;     3.566385     2.519234     3.376361 
 #&gt; 
-#&gt; converged= TRUE
+#&gt; $random
+#&gt; [1] FALSE
+#&gt; 
+#&gt; $random.effects
+#&gt; NULL
+#&gt; 
+#&gt; $likelihood
+#&gt; [1] -2106.394
+#&gt; 
+#&gt; $penalized.likelihood
+#&gt; [1] -2109.601
+#&gt; 
+#&gt; $nb.smooth
+#&gt; [1] 4
+#&gt; 
+#&gt; $smoothing.parameter
+#&gt;       tint(fu)      tint(age) tint(fu,age).1 tint(fu,age).2 
+#&gt;   9.405365e-01   6.451661e+00   1.830722e-01   1.279995e+05 
+#&gt; 
+#&gt; $parameters
+#&gt; [1] 25
+#&gt; 
+#&gt; $edf
+#&gt; [1] 10.46198
+#&gt; 
+#&gt; $method
+#&gt; [1] &quot;LAML&quot;
+#&gt; 
+#&gt; $criterion.val
+#&gt; [1] 2122.697
+#&gt; 
+#&gt; $converged
+#&gt; [1] TRUE
+#&gt; 
+#&gt; attr(,&quot;class&quot;)
+#&gt; [1] &quot;summary.survPen&quot;
 
 # predictions
 new.age &lt;- seq(50,90,length=50)
@@ -2129,10 +2217,10 @@ persp(new.time,new.age,Z.tint,col=colors[facet(Z.tint)],main=&quot;tint&quot;,th
 xlab=&quot;\n time since diagnosis&quot;,ylab=&quot;\n age&quot;,zlab=&quot;\n excess hazard&quot;,
 ticktype=&quot;detailed&quot;,zlim=c(0,zmax))</code></pre>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
-<p>The first thing to notice is that the <em>tensor</em> model is associated with two smoothing parameters whereas the <em>tint</em> model is associated with four of them. In the <em>tint</em> model, the smoothing parameter associated with age in the interaction term (tint(fu,age).2) is much higher than the one associated with the main effect of age (tint(age)). This behaviour is of course impossible to obtain with the <em>tensor</em> approach.</p>
+<p>The first thing to notice is that the <code>tensor</code> model is associated with two smoothing parameters whereas the <code>tint</code> model is associated with four of them. In the <code>tint</code> model, the smoothing parameter associated with age in the interaction term (tint(fu,age).2) is much higher than the one associated with the main effect of age (tint(age)). This behaviour is of course impossible to obtain with the <code>tensor</code> approach.</p>
 <p>Despite this difference, the two approaches show almost identical predictions in this last example.</p>
 <p>In practice, consider using the tensor interaction approach if you expect an interaction structure which is either simpler or more complex than the main effects.</p>
-<p>Let’s illustrate the differences between <em>tensor</em> and <em>tint</em>. Consider the following dataset</p>
+<p>Let’s illustrate the differences between <code>tensor</code> and <code>tint</code>. Consider the following dataset</p>
 <pre class="r"><code>set.seed(18)
 subdata &lt;- datCancer[sample(1:2000,50),]</code></pre>
 <p>Now we fit the same models as before</p>
@@ -2155,8 +2243,8 @@ mod.tint.sub$lambda
 summary(mod.tint.sub)$edf.per.smooth
 #&gt;     tint(fu)    tint(age) tint(fu,age) 
 #&gt;     1.000031     1.000013     1.822548</code></pre>
-<p>As we can see, the <em>tint</em> reduces the edf of the main effects almost to a minimum of 1 (equivalent to say that the effects are linear). However, the interaction is a bit more complex. If we look at the smoothing parameters we see that the main effects have been heavily penalized whereas the time effect in its interaction with the age effect has almost not been.</p>
-<p>This difference in terms of the extent of penalization between the main effects and the interactions is not possible with the <em>tensor</em> model. Indeed, the estimated smoothing parameters in the <em>tensor</em> model concern the main effects as well as the interactions. And here we see that both the main effects and the interactions get heavily penalized.</p>
+<p>As we can see, the <code>tint</code> reduces the edf of the main effects almost to a minimum of 1 (equivalent to say that the effects are linear). However, the interaction is a bit more complex. If we look at the smoothing parameters we see that the main effects have been heavily penalized whereas the time effect in its interaction with the age effect has almost not been.</p>
+<p>This difference in terms of the extent of penalization between the main effects and the interactions is not possible with the <code>tensor</code> model. Indeed, the estimated smoothing parameters in the <code>tensor</code> model concern the main effects as well as the interactions. And here we see that both the main effects and the interactions get heavily penalized.</p>
 <p>Let’s look at the predictions</p>
 <pre class="r"><code>new.age &lt;- seq(quantile(subdata$age,0.10),quantile(subdata$age,0.90),length=50)
 new.time &lt;- seq(0,max(subdata$fu),length=50)
@@ -2176,7 +2264,7 @@ persp(new.time,new.age,Z.tint.sub,col=colors[facet(Z.tint.sub)],main=&quot;tint&
 xlab=&quot;\n time since diagnosis&quot;,ylab=&quot;\n age&quot;,zlab=&quot;\n excess hazard&quot;,
 ticktype=&quot;detailed&quot;,zlim=c(0,zmax))</code></pre>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
-<p>The predictions confirm that the interactions between time and age is much stronger according to the <em>tint</em> model, especially for older patients in early follow-up.</p>
+<p>The predictions confirm that the interactions between time and age is much stronger according to the <code>tint</code> model, especially for older patients in early follow-up.</p>
 <p>To see more precisely these differences, let’s look at the 2D plots. Thus, we predict the dynamics of the excess hazard for four different ages (50, 60, 70 and 80) for both models.</p>
 <pre class="r"><code>data2D &lt;- expand.grid(fu=new.time,age=c(50,60,70,80))
 
@@ -2203,7 +2291,7 @@ lines(new.time,data2D[data2D$age==i,]$haz.tint,col=&quot;red&quot;,lty=2,lwd=lwd
 
 mod.tint.sub$aic2
 #&gt; [1] 118.499</code></pre>
-<p>In this case, the <em>tensor</em> model is to be preferred.</p>
+<p>In this case, the <code>tensor</code> model is to be preferred.</p>
 </div>
 <div id="three-dimensions" class="section level3">
 <h3>Three dimensions</h3>
@@ -2213,31 +2301,60 @@ mod.tint.sub$aic2
 # excess hazard model
 mod6 &lt;- survPen(f4,data=datCancer,t1=fu,event=dead,expected=rate)
 summary(mod6)
-#&gt; penalized excess hazard model 
-#&gt;  
-#&gt; Call:
+#&gt; $type
+#&gt; [1] &quot;penalized excess hazard model&quot;
+#&gt; 
+#&gt; $call
 #&gt; survPen(formula = f4, data = datCancer, t1 = fu, event = dead, 
 #&gt;     expected = rate)
 #&gt; 
-#&gt; Coefficients:
-#&gt;             Estimate Std. Error z value  Pr(&gt;|z|)    
-#&gt; (Intercept) -3.43068    0.19226 -17.844 &lt; 2.2e-16 ***
-#&gt; ---
-#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; $formula
+#&gt; ~tensor(fu, age, yod, df = c(5, 5, 5))
 #&gt; 
-#&gt; likelihood= -2035.52 , penalized likelihood= -2040.37
-#&gt; Number of parameters= 125 , effective degrees of freedom= 17.789
-#&gt; LAML = 2046.54 
-#&gt;  
-#&gt; Smoothing parameter(s):
-#&gt; tensor(fu,age,yod).1 tensor(fu,age,yod).2 tensor(fu,age,yod).3 
-#&gt;            0.2725013           14.1288872           82.3996449 
+#&gt; $coefficients
+#&gt;              Estimate Std. Error   z value    Pr(&gt;|z|)
+#&gt; (Intercept) -3.430679  0.1922579 -17.84415 3.20928e-71
 #&gt; 
-#&gt; edf of smooth terms:
+#&gt; $edf.per.smooth
 #&gt; tensor(fu,age,yod) 
 #&gt;           16.78903 
 #&gt; 
-#&gt; converged= TRUE
+#&gt; $random
+#&gt; [1] FALSE
+#&gt; 
+#&gt; $random.effects
+#&gt; NULL
+#&gt; 
+#&gt; $likelihood
+#&gt; [1] -2035.521
+#&gt; 
+#&gt; $penalized.likelihood
+#&gt; [1] -2040.367
+#&gt; 
+#&gt; $nb.smooth
+#&gt; [1] 3
+#&gt; 
+#&gt; $smoothing.parameter
+#&gt; tensor(fu,age,yod).1 tensor(fu,age,yod).2 tensor(fu,age,yod).3 
+#&gt;            0.2725013           14.1288872           82.3996449 
+#&gt; 
+#&gt; $parameters
+#&gt; [1] 125
+#&gt; 
+#&gt; $edf
+#&gt; [1] 17.78903
+#&gt; 
+#&gt; $method
+#&gt; [1] &quot;LAML&quot;
+#&gt; 
+#&gt; $criterion.val
+#&gt; [1] 2046.544
+#&gt; 
+#&gt; $converged
+#&gt; [1] TRUE
+#&gt; 
+#&gt; attr(,&quot;class&quot;)
+#&gt; [1] &quot;summary.survPen&quot;
 
 
 # predictions of surfaces for years 1990, 1997, 2003 and 2010
@@ -2271,14 +2388,14 @@ ticktype=&quot;detailed&quot;,zlim=c(0,1))</code></pre>
 </div>
 <div id="interactions-between-smooth-terms-and-factors-or-parametric-terms" class="section level1">
 <h1>Interactions between smooth terms and factors or parametric terms</h1>
-<p>The <em>smf</em>, <em>tensor</em> and <em>tint</em> terms used to specify smooths accept an argument <em>by</em> that allows for building varying-coefficient models i.e. for letting smoothers ‘interact’ with factors or parametric terms.</p>
-<p>For continuous variables, simple linear interaction with a smooth term may be specified through the <em>by</em> argument, as in the following model (using age as the continuous covariate):</p>
+<p>The <code>smf</code>, <code>tensor</code> and <code>tint</code> terms used to specify smooths accept an argument <code>by</code> that allows for building varying-coefficient models i.e. for letting smoothers ‘interact’ with factors or parametric terms.</p>
+<p>For continuous variables, simple linear interaction with a smooth term may be specified through the <code>by</code> argument, as in the following model (using age as the continuous covariate):</p>
 <p><span class="math display">\[ log[h(t,age)]=f(t) + \beta \times age + g(t) \times age \]</span></p>
-<p>where <span class="math inline">\(f\)</span> and <span class="math inline">\(g\)</span> are penalized splines. In <em>survPen</em>, this model is specified with formula <em>smf(t) + smf(t,by=age)</em>. Note that the main effect of age is included in the term <em>smf(t,by=age)</em>. You do not want to include the main effect of age, then use <em>tint(t,by=age)</em>. This is useful if we want to fit the following model for example:</p>
+<p>where <span class="math inline">\(f\)</span> and <span class="math inline">\(g\)</span> are penalized splines. In <code>survPen</code>, this model is specified with formula <code>smf(t) + smf(t,by=age)</code>. Note that the main effect of age is included in the term <code>smf(t,by=age)</code>. You do not want to include the main effect of age, then use <code>tint(t,by=age)</code>. This is useful if we want to fit the following model for example:</p>
 <p><span class="math display">\[ log[h(t,age)]=f(t) + f_2(age) + g(t) \times age \]</span></p>
-<p>Where <span class="math inline">\(f_2\)</span> is a penalized spline. Such a model is specified via <em>smf(t) + smf(age) + tint(t,by=age)</em>.</p>
-<p>Technically, if a <em>by</em> variable is numeric, then its <span class="math inline">\(i^{th}\)</span> element multiples the <span class="math inline">\(i^{th}\)</span> row of the model matrix corresponding to the smooth term concerned.</p>
-<p>Factor <em>by</em> variables allow specifying three types of models:</p>
+<p>Where <span class="math inline">\(f_2\)</span> is a penalized spline. Such a model is specified via <code>smf(t) + smf(age) + tint(t,by=age)</code>.</p>
+<p>Technically, if a <code>by</code> variable is numeric, then its <span class="math inline">\(i^{th}\)</span> element multiples the <span class="math inline">\(i^{th}\)</span> row of the model matrix corresponding to the smooth term concerned.</p>
+<p>Factor <code>by</code> variables allow specifying three types of models:</p>
 <ul>
 <li>stratified analysis: the penalized spline is duplicated as many times as there are modalities</li>
 <li>stratified designs with common smoothing parameters: the design is the same as in the stratified analysis but the smoothing parameters are forced to be common to all modalities</li>
@@ -2286,15 +2403,15 @@ ticktype=&quot;detailed&quot;,zlim=c(0,1))</code></pre>
 </ul>
 <p>The following model is an example of stratified analysis:</p>
 <p><span class="math display">\[ log[h(t,sex)]= f_{women}(t) + f_{men}(t) \]</span></p>
-<p>where <span class="math inline">\(f_{women}\)</span> and <span class="math inline">\(f_{men}\)</span> are penalized splines corresponding to the baseline hazards for women and for men, respectively. In this design, the regression parameters for men are completely independent from the parameters for women. The smoothing parameters for men and women (<span class="math inline">\(\lambda_{men}\)</span> and <span class="math inline">\(\lambda_{women}\)</span>) are independently estimated as well. This model is therefore equivalent to a stratified analysis. The model would be specified by using the term <em>sex + smf(t,by=sex)</em>. Be careful here, contrary to the continuous setting, <em>smf(t,by=sex)</em> is subject to centering constraints and does not include the main effect of sex.</p>
-<p>The stratified design with common smoothing parameters applied to the above model would impose <span class="math inline">\(\lambda_{men} = \lambda_{women}\)</span>. This is useful if we think that the baseline hazard for women is likely to be as complex as the one for men. In that case, the formula becomes <em>sex + smf(t,by=sex,same.rho=TRUE)</em> and the model estimates a unique smoothing parameter. In the stratified analysis, the formula is actually <em>sex + smf(t,by=sex,same.rho=FALSE)</em> as <em>same.rho=FALSE</em> is the default setting.</p>
+<p>where <span class="math inline">\(f_{women}\)</span> and <span class="math inline">\(f_{men}\)</span> are penalized splines corresponding to the baseline hazards for women and for men, respectively. In this design, the regression parameters for men are completely independent from the parameters for women. The smoothing parameters for men and women (<span class="math inline">\(\lambda_{men}\)</span> and <span class="math inline">\(\lambda_{women}\)</span>) are independently estimated as well. This model is therefore equivalent to a stratified analysis. The model would be specified by using the term <code>sex + smf(t,by=sex)</code>. Be careful here, contrary to the continuous setting, <code>smf(t,by=sex)</code> is subject to centering constraints and does not include the main effect of sex.</p>
+<p>The stratified design with common smoothing parameters applied to the above model would impose <span class="math inline">\(\lambda_{men} = \lambda_{women}\)</span>. This is useful if we think that the baseline hazard for women is likely to be as complex as the one for men. In that case, the formula becomes <code>sex + smf(t,by=sex,same.rho=TRUE)</code> and the model estimates a unique smoothing parameter. In the stratified analysis, the formula is actually <code>sex + smf(t,by=sex,same.rho=FALSE)</code> as <code>same.rho=FALSE</code> is the default setting.</p>
 <p>The penalized difference approach allows specifying models like this one:</p>
 <p><span class="math display">\[ log[h(t,sex)]= f(t) + f_{diffmen}(t) \]</span></p>
-<p>In this model, <span class="math inline">\(f\)</span> is common to men and women whereas <span class="math inline">\(f_{diffmen}\)</span> represents what must be added to <span class="math inline">\(f\)</span> in order to get the effect of time among men. In other words, <span class="math inline">\(f_{diffmen}\)</span> is a <em>difference smooth</em> between men and women. Since this smoothed difference is defined on the log-hazard scale, we can see that <span class="math inline">\(f_{diffmen}\)</span> actually corresponds to the log-hazard ratio between men and women. Thus, the real advantage of the difference smooth approach is to allow defining the penalty on the log-hazard ratio scale instead on the classical log-hazard one. This model is obtained by the formula <em>sex + smf(t) + smf(t,by=sex)</em> where <em>sex</em> has been turned into an ordered factor. The reference modality is then the first level of the ordered factor (in that case its women).</p>
-<p>Technically, if a <em>by</em> variable is a factor then it generates an indicator vector for each level of the factor, unless it is an ordered factor. In the non-ordered case, the model matrix for the smooth term is then replicated for each factor level, and each copy has its rows multiplied by the corresponding rows of its indicator variable. The smoothness penalties are also duplicated for each factor level. In short, a different smoother is generated for each factor level. Ordered <em>by</em> variables are handled in the same way, except that no smooth is generated for the first level of the ordered factor (like in the <em>mgcv</em> package). This is useful if you are interested in differences from a reference level.</p>
+<p>In this model, <span class="math inline">\(f\)</span> is common to men and women whereas <span class="math inline">\(f_{diffmen}\)</span> represents what must be added to <span class="math inline">\(f\)</span> in order to get the effect of time among men. In other words, <span class="math inline">\(f_{diffmen}\)</span> is a <em>difference smooth</em> between men and women. Since this smoothed difference is defined on the log-hazard scale, we can see that <span class="math inline">\(f_{diffmen}\)</span> actually corresponds to the log-hazard ratio between men and women. Thus, the real advantage of the difference smooth approach is to allow defining the penalty on the log-hazard ratio scale instead on the classical log-hazard one. This model is obtained by the formula <code>sex + smf(t) + smf(t,by=sex)</code> where <em>sex</em> has been turned into an ordered factor. The reference modality is then the first level of the ordered factor (in that case its women).</p>
+<p>Technically, if a <code>by</code> variable is a factor then it generates an indicator vector for each level of the factor, unless it is an ordered factor. In the non-ordered case, the model matrix for the smooth term is then replicated for each factor level, and each copy has its rows multiplied by the corresponding rows of its indicator variable. The smoothness penalties are also duplicated for each factor level. In short, a different smoother is generated for each factor level. Ordered <code>by</code> variables are handled in the same way, except that no smooth is generated for the first level of the ordered factor (like in the <code>mgcv</code> package). This is useful if you are interested in differences from a reference level.</p>
 <div id="illustration-of-using-a-factor-by-variable" class="section level3">
-<h3>Illustration of using a factor <em>by</em> variable</h3>
-<p>In what follows we will illustrate the <em>by</em> functionality with a factor sex variable. First we simulate survival times from a Weibull distribution. The parameters of the distribution depend on the sex of each individual (proportional effect).</p>
+<h3>Illustration of using a factor <code>by</code> variable</h3>
+<p>In what follows we will illustrate the <code>by</code> functionality with a factor sex variable. First we simulate survival times from a Weibull distribution. The parameters of the distribution depend on the sex of each individual (proportional effect).</p>
 <pre class="r"><code>n &lt;- 10000
 don &lt;- data.frame(num=1:n)
 
@@ -2414,40 +2531,40 @@ legend(&quot;bottomright&quot;,c(&quot;stratified&quot;,&quot;same.rho=FALSE&quo
 col=c(&quot;black&quot;,&quot;red&quot;,&quot;green3&quot;,&quot;orange&quot;,&quot;blue3&quot;),lwd=c(rep(lwd1,4),1))</code></pre>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
 <p>Again, the approaches <em>stratified</em> and <em>same.rho=FALSE</em> are identical. They give the same wiggly hazard ratio curve that is quite difficult to justify and explain. The <em>same.rho=TRUE</em> gives a slightly less wiggly hazard ratio curve whereas the <em>difference</em> approach gives a straight line not too far the true constant value.</p>
-<p>In this kind of situations, using an ordered <em>by</em> variable might be advantageous.</p>
+<p>In this kind of situations, using an ordered <code>by</code> variable might be advantageous.</p>
 </div>
 <div id="illustration-of-using-a-continuous-by-variable" class="section level3">
-<h3>Illustration of using a continuous <em>by</em> variable</h3>
-<p>Continuous <em>by</em> variable allows specifying time-varying coefficients models, i.e models in which a penalized spline is in interaction with the parametric effect of another covariate.</p>
-<p>Do not refrain to center continuous covariates to avoid convergence issues (especially when said continuous covariates are used as <em>by</em> variables)</p>
+<h3>Illustration of using a continuous <code>by</code> variable</h3>
+<p>Continuous <code>by</code> variable allows specifying time-varying coefficients models, i.e models in which a penalized spline is in interaction with the parametric effect of another covariate.</p>
+<p>Do not refrain to center continuous covariates to avoid convergence issues (especially when said continuous covariates are used as <code>by</code> variables)</p>
 <pre class="r"><code>datCancer$agec &lt;- datCancer$age - 50</code></pre>
 <p>Penalized cubic spline of time with linear interaction with age: <span class="math display">\[ log[h(t,age)]=f(t) + \beta \times age + g(t) \times age \]</span></p>
 <pre class="r"><code>m &lt;- survPen(~smf(fu) + smf(fu,by=agec),data=datCancer,t1=fu,event=dead)
-m$ll
+m$ll.pen
 #&gt; [1] -2112.848</code></pre>
 <p>Another option to fit the same model</p>
 <pre class="r"><code>m.bis &lt;- survPen(~smf(fu) + agec + tint(fu,by=agec,df=10),data=datCancer,t1=fu,event=dead)
-m.bis$ll # same penalized likelihood as m
+m.bis$ll.pen # same penalized log-likelihood as m
 #&gt; [1] -2112.848</code></pre>
 <p>Penalized cubic spline of time, penalized cubic spline of age and penalized cubic spline of time with linear interaction with age: <span class="math display">\[ log[h(t,age)] = f(t) + g(age) + k(t) \times age \]</span></p>
 <pre class="r"><code>m2 &lt;- survPen(~tint(fu,df=10) + tint(agec,df=10) + tint(fu,by=agec,df=10),data=datCancer,t1=fu,event=dead)
-m2$ll 
+m2$ll.pen 
 #&gt; [1] -2110.94</code></pre>
-<p>Be careful here. In model <em>m</em>, the effect of age is included in the term <em>smf(fu,by=agec)</em>. In <em>m.bis</em>, the term <em>tint(fu,by=agec,df=10)</em> is subjected to centering constraints and the effect of age itself is not included and therefore must be added as a parametric term. <em>tint</em> is particularly useful when several smoothers contain the same continuous <em>by</em> variable. Be also careful when using <em>tint</em> instead of <em>smf</em> since the default df is not the same (5 vs 10).</p>
+<p>Be careful here. In model <em>m</em>, the effect of age is included in the term <code>smf(fu,by=agec)</code>. In <em>m.bis</em>, the term <code>tint(fu,by=agec,df=10)</code> is subjected to centering constraints and the effect of age itself is not included and therefore must be added as a parametric term. <code>tint</code> is particularly useful when several smoothers contain the same continuous <code>by</code> variable. Be also careful when using <code>tint</code> instead of <code>smf</code> since the default df is not the same (5 vs 10).</p>
 </div>
 </div>
 <div id="frailty-models" class="section level1">
 <h1>Frailty models</h1>
-<p><em>survPen</em> allows including independent gaussian random effects, since such effects may be easily implemented though the penalization framework by using a ridge penalty (details in Wood 2017, section 5.8).</p>
-<p>This approach allows implementing commonly used random effect structures via the <em>rd</em> constructor. For example if <span class="math inline">\(g\)</span> is a factor then <span class="math inline">\(rd(g)\)</span> produces a random parameter for each level of <span class="math inline">\(g\)</span>, the random parameters being i.i.d. normal. If <span class="math inline">\(g\)</span> is a factor and <span class="math inline">\(x\)</span> is numeric, then <span class="math inline">\(rd(g,x)\)</span> produces an i.i.d. normal random slope relating the response to <span class="math inline">\(x\)</span> for each level of <span class="math inline">\(g\)</span>.</p>
+<p><code>survPen</code> allows including independent gaussian random effects, since such effects may be easily implemented though the penalization framework by using a ridge penalty (details in Wood 2017, section 5.8).</p>
+<p>This approach allows implementing commonly used random effect structures via the <code>rd</code> constructor. For example if <span class="math inline">\(g\)</span> is a factor then <span class="math inline">\(rd(g)\)</span> produces a random parameter for each level of <span class="math inline">\(g\)</span>, the random parameters being i.i.d. normal. If <span class="math inline">\(g\)</span> is a factor and <span class="math inline">\(x\)</span> is numeric, then <span class="math inline">\(rd(g,x)\)</span> produces an i.i.d. normal random slope relating the response to <span class="math inline">\(x\)</span> for each level of <span class="math inline">\(g\)</span>.</p>
 <p>Thus, random effects treated as penalized splines allow specifying frailty (excess) hazard models (Charvat et al. 2016). For each individual <span class="math inline">\(i\)</span> from cluster (usually geographical unit) <span class="math inline">\(j\)</span>, a possible model would be: <span class="math display">\[ log[h(t_{ij},x_{ij1},\ldots,x_{ijm})]=\sum_k g_k(t_{ij},x_{ij1},\ldots,x_{ijm}) + w_j \]</span></p>
-<p>where <span class="math inline">\(w_j\)</span> follows a normal distribution with mean 0. <span class="math inline">\(u_j = exp(w_j)\)</span> is known as the frailty term. The random effect associated with the cluster variable (random intercept) is specified with the model term <em>rd(cluster)</em>. We could also specify a random effect depending on age (random slope) for example with the model term <span class="math inline">\(rd(cluster,age)\)</span> (<span class="math inline">\(w_j\)</span> would then become <span class="math inline">\(w_j \times age_{ij}\)</span> in the above formula). Note that only independent random effets can yet be specified. For example, the model term <span class="math inline">\(rd(cluster) + rd(cluster,age)\)</span> creates a random intercept and a random slope of age but it is not possible to estimate any covariance parameters between them.</p>
-<p>Technically, when using <em>rd(cluster)</em>, the associated regression parameters <span class="math inline">\(w_j\)</span> are assumed i.i.d. normal, with unknown variance (to be estimated). This assumption is equivalent to an identity penalty matrix (i.e. a ridge penalty) on the regression parameters. The unknown smoothing parameter <span class="math inline">\(\lambda\)</span> associated with the term <em>rd(cluster)</em> is directly linked to the unknown variance <span class="math inline">\(\sigma^2\)</span>:</p>
+<p>where <span class="math inline">\(w_j\)</span> follows a normal distribution with mean 0. <span class="math inline">\(u_j = exp(w_j)\)</span> is known as the frailty term. The random effect associated with the cluster variable (random intercept) is specified with the model term <code>rd(cluster)</code>. We could also specify a random effect depending on age (random slope) for example with the model term <span class="math inline">\(rd(cluster,age)\)</span> (<span class="math inline">\(w_j\)</span> would then become <span class="math inline">\(w_j \times age_{ij}\)</span> in the above formula). Note that only independent random effets can yet be specified. For example, the model term <span class="math inline">\(rd(cluster) + rd(cluster,age)\)</span> creates a random intercept and a random slope of age but it is not possible to estimate any covariance parameters between them.</p>
+<p>Technically, when using <code>rd(cluster)</code>, the associated regression parameters <span class="math inline">\(w_j\)</span> are assumed i.i.d. normal, with unknown variance (to be estimated). This assumption is equivalent to an identity penalty matrix (i.e. a ridge penalty) on the regression parameters. The unknown smoothing parameter <span class="math inline">\(\lambda\)</span> associated with the term <code>rd(cluster)</code> is directly linked to the unknown variance <span class="math inline">\(\sigma^2\)</span>:</p>
 <p><span class="math display">\[ \sigma^2 = \frac{1}{\lambda \times S.scale} \]</span></p>
 <p>with <span class="math inline">\(S.scale\)</span> the rescaling factor associated with <span class="math inline">\(\lambda\)</span> (technical point: all penalty matrices used to define the penalized likelihood of the model are rescaled in order to be comparable in terms of a certain matrix norm. The associated rescaling factors are stored in the S.scale vector).</p>
 <p>The log standard deviation of the random effect is thus estimated by: <span class="math display">\[ log(\hat{\sigma})=-0.5 \times log(\hat{\lambda})-0.5 \times log(S.scale) \]</span></p>
 <p>And the estimated variance of the log standard deviation is: <span class="math display">\[ Var[log(\hat{\sigma})]=0.25 \times Var[log(\hat{\lambda})]=0.25 \times inv.Hess.rho \]</span></p>
-<p>To illustrate the use of the <em>rd</em> constructor, let’s set up the following simple simulation:</p>
+<p>To illustrate the use of the <code>rd</code> constructor, let’s set up the following simple simulation:</p>
 <ul>
 <li>For individual <span class="math inline">\(i\)</span> in cluster <span class="math inline">\(j\)</span>, the true model is:</li>
 </ul>
@@ -2520,35 +2637,61 @@ m2$ll
 <p>As we can see from this very simple simulation, the standard deviation is pretty well estimated.</p>
 <p>Let’s look at the summary of the last model</p>
 <pre class="r"><code>summary(mod.frailty)
-#&gt; penalized hazard model 
-#&gt;  
-#&gt; Call:
+#&gt; $type
+#&gt; [1] &quot;penalized hazard model&quot;
+#&gt; 
+#&gt; $call
 #&gt; survPen(formula = ~smf(fu) + rd(cluster), data = don, t1 = fu, 
 #&gt;     event = dead)
 #&gt; 
-#&gt; Coefficients:
-#&gt;              Estimate Std. Error z value  Pr(&gt;|z|)    
-#&gt; (Intercept) -0.669393   0.042603 -15.712 &lt; 2.2e-16 ***
-#&gt; ---
-#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#&gt; $formula
+#&gt; ~smf(fu) + rd(cluster)
 #&gt; 
-#&gt; Random effects (log(sd)):
-#&gt;              Estimate Std. Error
-#&gt; rd(cluster) -1.882433  0.2414823
+#&gt; $coefficients
+#&gt;              Estimate Std. Error   z value     Pr(&gt;|z|)
+#&gt; (Intercept) -0.669393  0.0426029 -15.71238 1.244183e-55
 #&gt; 
-#&gt; likelihood= -3000.17 , penalized likelihood= -3007.16
-#&gt; Number of parameters= 30 , effective degrees of freedom= 15.9556
-#&gt; LAML = 3023.06 
-#&gt;  
-#&gt; Smoothing parameter(s):
-#&gt;      smf(fu)  rd(cluster) 
-#&gt; 24007.809301     1.754218 
-#&gt; 
-#&gt; edf of smooth terms:
+#&gt; $edf.per.smooth
 #&gt;     smf(fu) rd(cluster) 
 #&gt;    2.080618   12.874943 
 #&gt; 
-#&gt; converged= TRUE</code></pre>
+#&gt; $random
+#&gt; [1] TRUE
+#&gt; 
+#&gt; $random.effects
+#&gt;              Estimate Std. Error
+#&gt; rd(cluster) -1.882433  0.2414823
+#&gt; 
+#&gt; $likelihood
+#&gt; [1] -3000.168
+#&gt; 
+#&gt; $penalized.likelihood
+#&gt; [1] -3007.156
+#&gt; 
+#&gt; $nb.smooth
+#&gt; [1] 2
+#&gt; 
+#&gt; $smoothing.parameter
+#&gt;      smf(fu)  rd(cluster) 
+#&gt; 24007.809301     1.754218 
+#&gt; 
+#&gt; $parameters
+#&gt; [1] 30
+#&gt; 
+#&gt; $edf
+#&gt; [1] 15.95556
+#&gt; 
+#&gt; $method
+#&gt; [1] &quot;LAML&quot;
+#&gt; 
+#&gt; $criterion.val
+#&gt; [1] 3023.055
+#&gt; 
+#&gt; $converged
+#&gt; [1] TRUE
+#&gt; 
+#&gt; attr(,&quot;class&quot;)
+#&gt; [1] &quot;summary.survPen&quot;</code></pre>
 <p>Here, we have <span class="math inline">\(sd(w_j) =\)</span> exp(-1.8824335) <span class="math inline">\(=\)</span> 0.1522192. You can retrieve this value from the model like this</p>
 <pre class="r"><code>exp(summary(mod.frailty)$random.effects)[1]
 #&gt; [1] 0.1522192</code></pre>
@@ -2571,8 +2714,8 @@ predict(mod.frailty,data.frame(fu=1,cluster=10),exclude.random=TRUE)$surv
 </div>
 <div id="left-truncation" class="section level1">
 <h1>Left truncation</h1>
-<p>The <em>t0</em> argument allows specifying entry times in case of left-truncated data</p>
-<p><strong>Nota Bene</strong>: The <em>begin</em> variable was simulated for illustration purposes only and is not representative of cancer data.</p>
+<p>The <code>t0</code> argument allows specifying entry times in case of left-truncated data</p>
+<p><strong>Nota Bene</strong>: The <code>begin</code> variable was simulated for illustration purposes only and is not representative of cancer data.</p>
 <pre class="r"><code># fitting
 f1 &lt;- ~smf(fu)
 
@@ -2595,7 +2738,7 @@ xlab=&quot;time since diagnosis (years)&quot;,ylab=&quot;survival&quot;,lwd=lwd1
 <h1>Other useful functionalities</h1>
 <div id="lambda" class="section level3">
 <h3>lambda</h3>
-<p>The <em>survPen</em> package estimates the smoothing parameters with either LCV or LAML. However, one can be interested in comparing the effect of a smoothing parameter on the predicted hazard or survival. The argument <em>lambda</em> allows the user to choose specific values for the smoothing parameters.</p>
+<p>The <code>survPen</code> package estimates the smoothing parameters with either LCV or LAML. However, one can be interested in comparing the effect of a smoothing parameter on the predicted hazard or survival. The argument <code>lambda</code> allows the user to choose specific values for the smoothing parameters.</p>
 <pre class="r"><code>f.pen &lt;- ~ smf(fu) 
 
 vec.lambda &lt;- c(0,1000,10^6)
@@ -2617,15 +2760,15 @@ for (i in (1:3)){
 </div>
 <div id="beta.ini-and-rho.ini" class="section level3">
 <h3>beta.ini and rho.ini</h3>
-<p>If you observe a convergence problem and intend to fix it, a simple option is to change the initial values used by the algorithm. The argument <em>beta.ini</em> allows you setting the regression parameters to specific values. This is especially useful if your excess hazard model fails to converge. Indeed, in that case, you can try to fit the corresponding total hazard model and use its estimated regression parameters as initial values for the excess hazard model. The argument <em>rho.ini</em> allows you choosing initial values for the log smoothing parameters. Consider also changing LAML to LCV to see if the convergence problem persists.</p>
+<p>If you observe a convergence problem and intend to fix it, a simple option is to change the initial values used by the algorithm. The argument <code>beta.ini</code> allows you setting the regression parameters to specific values. This is especially useful if your excess hazard model fails to converge. Indeed, in that case, you can try to fit the corresponding total hazard model and use its estimated regression parameters as initial values for the excess hazard model. The argument <code>rho.ini</code> allows you choosing initial values for the log smoothing parameters. Consider also changing LAML to LCV to see if the convergence problem persists.</p>
 <pre class="r"><code>mod.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,rho.ini=5)
 
 mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate,rho.ini=5,beta.ini=mod.pen$coef)</code></pre>
 </div>
 <div id="detail.rho-and-detail.beta" class="section level3">
 <h3>detail.rho and detail.beta</h3>
-<p>If a convergence problem occurs, it is always instructive to know exactly what is going on inside the optimization process. The arguments <em>detail.rho</em> and <em>detail.beta</em> were made to make the user’s life easier when dealing with convergence issues.</p>
-<p>The example below shows the effect of specifying <em>detail.rho=TRUE</em> when fitting a model</p>
+<p>If a convergence problem occurs, it is always instructive to know exactly what is going on inside the optimization process. The arguments <code>detail.rho</code> and <code>detail.beta</code> were made to make the user’s life easier when dealing with convergence issues.</p>
+<p>The example below shows the effect of specifying <code>detail.rho=TRUE</code> when fitting a model</p>
 <pre class="r"><code>mod.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE)
 #&gt; _______________________________________________________________________________________ 
 #&gt;  
@@ -2722,8 +2865,8 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 <li>val-val.old = difference of the two values above</li>
 <li>gradient = current value of the first derivative of LCV or LAML wrt log smoothing parameters</li>
 </ul>
-<p>In this example, we see that the first Newton step is huge (86.6 on the log scale is huge). When that happens the algorithm forbids the step value to be over the <em>step.max</em> argument (default is 5).</p>
-<p>The example below shows the effect of specifying <em>detail.rho=TRUE</em> and <em>detail.beta=TRUE</em> when fitting a model and thus illustrates the two nested Newton-Raphson algorithms.</p>
+<p>In this example, we see that the first Newton step is huge (86.6 on the log scale is huge). When that happens the algorithm forbids the step value to be over the <code>step.max</code> argument (default is 5).</p>
+<p>The example below shows the effect of specifying <code>detail.rho=TRUE</code> and <code>detail.beta=TRUE</code> when fitting a model and thus illustrates the two nested Newton-Raphson algorithms.</p>
 <pre class="r"><code>mod.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE,detail.beta=TRUE)
 #&gt; _______________________________________________________________________________________ 
 #&gt;  
@@ -2741,65 +2884,65 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 #&gt;  betaold=  -2.3569 0 0 0 0 0 0 0 0 0 
 #&gt;  beta=  -1.9734 -0.0489 -0.0892 -0.017 0.069 0.099 0.0861 -0.0087 -0.9255 0.2804 
 #&gt;  abs((beta-betaold)/betaold)=  0.16271 Inf Inf Inf Inf Inf Inf Inf Inf Inf 
-#&gt;  llold=  -8754.749 
-#&gt;  ll=  -4128.377 
-#&gt;  ll-llold=  4626.372 
+#&gt;  ll.pen.old=  -8754.749 
+#&gt;  ll.pen=  -4128.377 
+#&gt;  ll.pen-ll.pen.old=  4626.372 
 #&gt;  
 #&gt; iter beta:  2 
 #&gt;  betaold=  -1.9734 -0.0489 -0.0892 -0.017 0.069 0.099 0.0861 -0.0087 -0.9255 0.2804 
 #&gt;  beta=  -1.3122 -0.1065 -0.2063 -0.0399 0.1521 0.223 0.193 -0.0067 -1.7624 0.8343 
 #&gt;  abs((beta-betaold)/betaold)=  0.33508 1.18016 1.31217 1.35048 1.20398 1.25307 1.24171 0.22956 0.90434 1.97539 
-#&gt;  llold=  -4128.377 
-#&gt;  ll=  -2711.747 
-#&gt;  ll-llold=  1416.63 
+#&gt;  ll.pen.old=  -4128.377 
+#&gt;  ll.pen=  -2711.747 
+#&gt;  ll.pen-ll.pen.old=  1416.63 
 #&gt;  
 #&gt; iter beta:  3 
 #&gt;  betaold=  -1.3122 -0.1065 -0.2063 -0.0399 0.1521 0.223 0.193 -0.0067 -1.7624 0.8343 
 #&gt;  beta=  -0.5875 -0.1054 -0.2512 -0.059 0.1504 0.2501 0.2122 0.0847 -2.4514 1.6471 
 #&gt;  abs((beta-betaold)/betaold)=  0.55226 0.01027 0.21751 0.47772 0.01155 0.12128 0.0994 13.68239 0.39097 0.97416 
-#&gt;  llold=  -2711.747 
-#&gt;  ll=  -2370.601 
-#&gt;  ll-llold=  341.146 
+#&gt;  ll.pen.old=  -2711.747 
+#&gt;  ll.pen=  -2370.601 
+#&gt;  ll.pen-ll.pen.old=  341.146 
 #&gt;  
 #&gt; iter beta:  4 
 #&gt;  betaold=  -0.5875 -0.1054 -0.2512 -0.059 0.1504 0.2501 0.2122 0.0847 -2.4514 1.6471 
 #&gt;  beta=  -0.1298 -0.0392 -0.2243 -0.0876 0.0603 0.1942 0.1293 0.3425 -2.916 2.4493 
 #&gt;  abs((beta-betaold)/betaold)=  0.77903 0.62802 0.10699 0.48566 0.59918 0.22328 0.39056 3.04525 0.18951 0.48707 
-#&gt;  llold=  -2370.601 
-#&gt;  ll=  -2320.979 
-#&gt;  ll-llold=  49.62232 
+#&gt;  ll.pen.old=  -2370.601 
+#&gt;  ll.pen=  -2320.979 
+#&gt;  ll.pen-ll.pen.old=  49.62232 
 #&gt;  
 #&gt; iter beta:  5 
 #&gt;  betaold=  -0.1298 -0.0392 -0.2243 -0.0876 0.0603 0.1942 0.1293 0.3425 -2.916 2.4493 
 #&gt;  beta=  0.0049 0.0086 -0.2149 -0.1081 0.0045 0.185 0.055 0.5494 -3.1121 2.8758 
 #&gt;  abs((beta-betaold)/betaold)=  1.03773 1.21987 0.04189 0.23381 0.92484 0.04745 0.57452 0.60426 0.06725 0.17413 
-#&gt;  llold=  -2320.979 
-#&gt;  ll=  -2318.206 
-#&gt;  ll-llold=  2.7728 
+#&gt;  ll.pen.old=  -2320.979 
+#&gt;  ll.pen=  -2318.206 
+#&gt;  ll.pen-ll.pen.old=  2.7728 
 #&gt;  
 #&gt; iter beta:  6 
 #&gt;  betaold=  0.0049 0.0086 -0.2149 -0.1081 0.0045 0.185 0.055 0.5494 -3.1121 2.8758 
 #&gt;  beta=  0.0153 0.0149 -0.2154 -0.1095 -0.0034 0.1894 0.04 0.5853 -3.1407 2.9464 
 #&gt;  abs((beta-betaold)/betaold)=  2.13347 0.7224 0.00235 0.01291 1.7404 0.02398 0.27293 0.06521 0.0092 0.02458 
-#&gt;  llold=  -2318.206 
-#&gt;  ll=  -2318.182 
-#&gt;  ll-llold=  0.02392 
+#&gt;  ll.pen.old=  -2318.206 
+#&gt;  ll.pen=  -2318.182 
+#&gt;  ll.pen-ll.pen.old=  0.02392 
 #&gt;  
 #&gt; iter beta:  7 
 #&gt;  betaold=  0.0153 0.0149 -0.2154 -0.1095 -0.0034 0.1894 0.04 0.5853 -3.1407 2.9464 
 #&gt;  beta=  0.0154 0.0149 -0.2154 -0.1094 -0.0035 0.1896 0.0397 0.5859 -3.1412 2.9478 
 #&gt;  abs((beta-betaold)/betaold)=  0.00431 0.00383 0.00012 0.00022 0.03289 0.00078 0.00725 0.00107 0.00016 0.00045 
-#&gt;  llold=  -2318.182 
-#&gt;  ll=  -2318.182 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2318.182 
+#&gt;  ll.pen=  -2318.182 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; iter beta:  8 
 #&gt;  betaold=  0.0154 0.0149 -0.2154 -0.1094 -0.0035 0.1896 0.0397 0.5859 -3.1412 2.9478 
 #&gt;  beta=  0.0154 0.0149 -0.2154 -0.1094 -0.0035 0.1896 0.0397 0.5859 -3.1412 2.9478 
 #&gt;  abs((beta-betaold)/betaold)=  0 0 0 0 1e-05 0 0 0 0 0 
-#&gt;  llold=  -2318.182 
-#&gt;  ll=  -2318.182 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2318.182 
+#&gt;  ll.pen=  -2318.182 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; 
 #&gt;  Beta optimization ok,  8 iterations 
@@ -2819,25 +2962,25 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 #&gt;  betaold=  0.0154 0.0149 -0.2154 -0.1094 -0.0035 0.1896 0.0397 0.5859 -3.1412 2.9478 
 #&gt;  beta=  0.006 0.0091 -0.1068 -0.0735 0.0136 0.1955 0.0783 0.5774 -3.1212 2.8726 
 #&gt;  abs((beta-betaold)/betaold)=  0.60769 0.39263 0.50423 0.3285 4.92589 0.03097 0.97074 0.01443 0.00637 0.02551 
-#&gt;  llold=  -2319.891 
-#&gt;  ll=  -2319.091 
-#&gt;  ll-llold=  0.80024 
+#&gt;  ll.pen.old=  -2319.891 
+#&gt;  ll.pen=  -2319.091 
+#&gt;  ll.pen-ll.pen.old=  0.80024 
 #&gt;  
 #&gt; iter beta:  2 
 #&gt;  betaold=  0.006 0.0091 -0.1068 -0.0735 0.0136 0.1955 0.0783 0.5774 -3.1212 2.8726 
 #&gt;  beta=  0.006 0.0092 -0.1068 -0.0734 0.0138 0.1955 0.0779 0.5777 -3.1216 2.8715 
 #&gt;  abs((beta-betaold)/betaold)=  0.00907 0.01159 0.00016 0.00076 0.01201 0.00021 0.00471 4e-04 0.00011 0.00036 
-#&gt;  llold=  -2319.091 
-#&gt;  ll=  -2319.091 
-#&gt;  ll-llold=  0.00014 
+#&gt;  ll.pen.old=  -2319.091 
+#&gt;  ll.pen=  -2319.091 
+#&gt;  ll.pen-ll.pen.old=  0.00014 
 #&gt;  
 #&gt; iter beta:  3 
 #&gt;  betaold=  0.006 0.0092 -0.1068 -0.0734 0.0138 0.1955 0.0779 0.5777 -3.1216 2.8715 
 #&gt;  beta=  0.006 0.0092 -0.1068 -0.0734 0.0138 0.1955 0.0779 0.5777 -3.1216 2.8715 
 #&gt;  abs((beta-betaold)/betaold)=  0 0 0 0 1e-05 0 0 0 0 0 
-#&gt;  llold=  -2319.091 
-#&gt;  ll=  -2319.091 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2319.091 
+#&gt;  ll.pen=  -2319.091 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; 
 #&gt;  Beta optimization ok,  3 iterations 
@@ -2866,25 +3009,25 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 #&gt;  betaold=  0.006 0.0092 -0.1068 -0.0734 0.0138 0.1955 0.0779 0.5777 -3.1216 2.8715 
 #&gt;  beta=  2e-04 3e-04 -0.0053 -0.0077 0.0048 0.0648 0.0893 0.4628 -3.0454 2.6652 
 #&gt;  abs((beta-betaold)/betaold)=  0.96815 0.97017 0.95065 0.89517 0.65432 0.66869 0.14592 0.1989 0.02439 0.07184 
-#&gt;  llold=  -2340.432 
-#&gt;  ll=  -2321.439 
-#&gt;  ll-llold=  18.99299 
+#&gt;  ll.pen.old=  -2340.432 
+#&gt;  ll.pen=  -2321.439 
+#&gt;  ll.pen-ll.pen.old=  18.99299 
 #&gt;  
 #&gt; iter beta:  2 
 #&gt;  betaold=  2e-04 3e-04 -0.0053 -0.0077 0.0048 0.0648 0.0893 0.4628 -3.0454 2.6652 
 #&gt;  beta=  2e-04 3e-04 -0.0052 -0.0076 0.0048 0.0643 0.0871 0.4643 -3.0476 2.6661 
 #&gt;  abs((beta-betaold)/betaold)=  0.07155 0.01716 0.00858 0.0096 0.00375 0.00724 0.02393 0.00338 0.00071 0.00032 
-#&gt;  llold=  -2321.439 
-#&gt;  ll=  -2321.438 
-#&gt;  ll-llold=  0.00126 
+#&gt;  ll.pen.old=  -2321.439 
+#&gt;  ll.pen=  -2321.438 
+#&gt;  ll.pen-ll.pen.old=  0.00126 
 #&gt;  
 #&gt; iter beta:  3 
 #&gt;  betaold=  2e-04 3e-04 -0.0052 -0.0076 0.0048 0.0643 0.0871 0.4643 -3.0476 2.6661 
 #&gt;  beta=  2e-04 3e-04 -0.0052 -0.0076 0.0048 0.0643 0.0871 0.4643 -3.0476 2.6661 
 #&gt;  abs((beta-betaold)/betaold)=  0 0 0 0 0 1e-05 2e-05 0 0 0 
-#&gt;  llold=  -2321.438 
-#&gt;  ll=  -2321.438 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2321.438 
+#&gt;  ll.pen=  -2321.438 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; 
 #&gt;  Beta optimization ok,  3 iterations 
@@ -2913,25 +3056,25 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 #&gt;  betaold=  2e-04 3e-04 -0.0052 -0.0076 0.0048 0.0643 0.0871 0.4643 -3.0476 2.6661 
 #&gt;  beta=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0762 0.4359 -3.0353 2.6368 
 #&gt;  abs((beta-betaold)/betaold)=  0.42488 0.50152 0.35583 0.32587 0.37734 0.31442 0.12602 0.06122 0.00405 0.011 
-#&gt;  llold=  -2321.898 
-#&gt;  ll=  -2321.813 
-#&gt;  ll-llold=  0.08487 
+#&gt;  ll.pen.old=  -2321.898 
+#&gt;  ll.pen=  -2321.813 
+#&gt;  ll.pen-ll.pen.old=  0.08487 
 #&gt;  
 #&gt; iter beta:  2 
 #&gt;  betaold=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0762 0.4359 -3.0353 2.6368 
 #&gt;  beta=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0761 0.436 -3.0353 2.6368 
 #&gt;  abs((beta-betaold)/betaold)=  0.00078 0.00116 0.00018 0.00043 0.00113 0.00018 4e-05 0.00026 2e-05 1e-05 
-#&gt;  llold=  -2321.813 
-#&gt;  ll=  -2321.813 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2321.813 
+#&gt;  ll.pen=  -2321.813 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; iter beta:  3 
 #&gt;  betaold=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0761 0.436 -3.0353 2.6368 
 #&gt;  beta=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0761 0.436 -3.0353 2.6368 
 #&gt;  abs((beta-betaold)/betaold)=  0 0 0 0 0 0 0 0 0 0 
-#&gt;  llold=  -2321.813 
-#&gt;  ll=  -2321.813 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2321.813 
+#&gt;  ll.pen=  -2321.813 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; 
 #&gt;  Beta optimization ok,  3 iterations 
@@ -2960,17 +3103,17 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 #&gt;  betaold=  1e-04 1e-04 -0.0034 -0.0051 0.003 0.0441 0.0761 0.436 -3.0353 2.6368 
 #&gt;  beta=  1e-04 1e-04 -0.0034 -0.0052 0.003 0.0446 0.0765 0.4369 -3.0357 2.6376 
 #&gt;  abs((beta-betaold)/betaold)=  0.01538 0.02071 0.01216 0.01101 0.01354 0.0111 0.00429 0.00191 0.00011 0.00031 
-#&gt;  llold=  -2321.802 
-#&gt;  ll=  -2321.802 
-#&gt;  ll-llold=  5e-05 
+#&gt;  ll.pen.old=  -2321.802 
+#&gt;  ll.pen=  -2321.802 
+#&gt;  ll.pen-ll.pen.old=  5e-05 
 #&gt;  
 #&gt; iter beta:  2 
 #&gt;  betaold=  1e-04 1e-04 -0.0034 -0.0052 0.003 0.0446 0.0765 0.4369 -3.0357 2.6376 
 #&gt;  beta=  1e-04 1e-04 -0.0034 -0.0052 0.003 0.0446 0.0765 0.4369 -3.0357 2.6376 
 #&gt;  abs((beta-betaold)/betaold)=  0 0 0 0 0 0 0 0 0 0 
-#&gt;  llold=  -2321.802 
-#&gt;  ll=  -2321.802 
-#&gt;  ll-llold=  0 
+#&gt;  ll.pen.old=  -2321.802 
+#&gt;  ll.pen=  -2321.802 
+#&gt;  ll.pen-ll.pen.old=  0 
 #&gt;  
 #&gt; 
 #&gt;  Beta optimization ok,  2 iterations 
@@ -2996,11 +3139,11 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 <li>betaold = former values of the regression parameters</li>
 <li>beta = current values of the regression parameters</li>
 <li>abs((beta-betaold)/betaold) = absolute value of the relative difference between current and former regression parameters values (criterion used to check for convergence)</li>
-<li>llold = former value of the penalized log-likelihood</li>
-<li>ll = current value of the penalized log-likelihood</li>
-<li>ll-llold = difference of the two values above</li>
+<li>ll.pen.old = former value of the penalized log-likelihood</li>
+<li>ll.pen = current value of the penalized log-likelihood</li>
+<li>ll.pen - ll.pen.old = difference of the two values above</li>
 </ul>
-<p>When using <em>detail.rho</em> or <em>detail.beta</em>, you might also see from time to time a warning message indicating that the Hessian (of LCV, LAML or the penalized likelihood) has been perturbed. As long as this Hessian perturbation does not occur at the very last iteration, you do not need to worry about this warning. The algorithm is just making sure that the step it is going to take is a descent direction. However, if the Hessian perturbation occurs at convergence (whether for the smoothing or regression parameters), it might indicate a convergence issue (see the <em>Hess.beta.modif</em> and <em>Hess.rho.modif</em> values returned by the model).</p>
+<p>When using <code>detail.rho</code> or <code>detail.beta</code>, you might also see from time to time a warning message indicating that the Hessian (of LCV, LAML or the penalized likelihood) has been perturbed. As long as this Hessian perturbation does not occur at the very last iteration, you do not need to worry about this warning. The algorithm is just making sure that the step it is going to take is a descent direction. However, if the Hessian perturbation occurs at convergence (whether for the smoothing or regression parameters), it might indicate a convergence issue (see the <em>Hess.beta.modif</em> and <em>Hess.rho.modif</em> values returned by the model).</p>
 </div>
 </div>
 <div id="references" class="section level1">
@@ -3016,7 +3159,7 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 <li>O Sullivan, F. (1988), Fast computation of fully automated log-density and log-hazard estimators. SIAM Journal on scientific and statistical computing, 9(2), 363-379.</li>
 <li>Remontet, L., Bossard, N., Belot, A., and Esteve, J. (2007), An overall strategy based on regression models to estimate relative survival and model the effects of prognostic factors in cancer survival studies. Statistics in medicine, 26(10), 2214-2228.</li>
 <li>Remontet, L., Uhry, Z., Bossard, N., Iwaz, J., Belot, A., Danieli, C., Charvat, H., Roche, L. and CENSUR Working Survival Group (2018) Flexible and structured survival model for a simultaneous estimation of non-linear and non-proportional effects and complex interactions between continuous variables: Performance of this multidimensional penalized spline approach in net survival trend analysis. Stat Methods Med Res. 2018 Jan 1:962280218779408. doi: 10.1177/0962280218779408. [Epub ahead of print].</li>
-<li>Wood, S.N. (2006). Low‐rank scale‐invariant tensor product smooths for generalized additive mixed models. Biometrics, 62(4), 1025-1036.</li>
+<li>Wood, S.N. (2006). Low-rank scale-invariant tensor product smooths for generalized additive mixed models. Biometrics, 62(4), 1025-1036.</li>
 <li>Wood, S. N. (2017) Generalized additive models: an introduction with R: Chapman and Hall/CRC.</li>
 <li>Wood, S.N., Pya, N. and Saefken, B. (2016), Smoothing parameter and model selection for general smooth models (with discussion). Journal of the American Statistical Association 111, 1548-1575</li>
 </ul>

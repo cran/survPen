@@ -79,7 +79,7 @@ NULL
 #' \item{Hess.beta}{hessian of the penalized log-likelihood with respect to the regression parameters}
 #' \item{Hess.beta.modif}{if TRUE, the hessian of the penalized log-likelihood has been perturbed at convergence}
 #' \item{ll.unpen}{log-likelihood at convergence}
-#' \item{ll}{penalized log-likelihood at convergence}
+#' \item{ll.pen}{penalized log-likelihood at convergence}
 #' \item{deriv.rho.beta}{transpose of the Jacobian of beta with respect to the log smoothing parameters}
 #' \item{deriv.rho.inv.Hess.beta}{list containing the derivatives of the inverse of \code{Hess} with respect to the log smoothing parameters}
 #' \item{deriv.rho.Hess.unpen.beta}{list containing the derivatives of \code{Hess.unpen} with respect to the log smoothing parameters}
@@ -135,6 +135,17 @@ NULL
 #' @return Matrix of dimensions n*(p1*p2) representing the row tensor product of the matrices X1 and X2
 #' @export
 #'
+#' @examples
+#'
+#' library(survPen)
+#' 
+#' # row-wise tensor product between two design matrices
+#' set.seed(15)
+#'
+#' X1 <- matrix(rnorm(10*3),nrow=10,ncol=3)
+#' X2 <- matrix(rnorm(10*2),nrow=10,ncol=2)
+#' tensor.in(X1,X2)
+#' 
 tensor.in <- function(X1,X2){
 
 	# each column of X1 is multiplied by all the columns of X2
@@ -161,6 +172,18 @@ tensor.in <- function(X1,X2){
 #' \item{T}{Matrix of dimensions n*(p1*p2*...*pm) representing the row tensor product of the matrices in X}
 #' @export
 #'
+#' @examples
+#'
+#' library(survPen)
+#'
+#' # row-wise tensor product between three design matrices
+#' set.seed(15)
+#'
+#' X1 <- matrix(rnorm(10*3),nrow=10,ncol=3)
+#' X2 <- matrix(rnorm(10*2),nrow=10,ncol=2)
+#' X3 <- matrix(rnorm(10*2),nrow=10,ncol=2)
+#' tensor.prod.X(list(X1,X2,X3))
+#' 
 tensor.prod.X <- function (X) 
 {
     m <- length(X) # number of matrices
@@ -207,6 +230,20 @@ tensor.prod.X <- function (X)
 #' \item{TS}{List of the penalty matrices associated with the tensor product smooth}
 #' @export
 #'
+#' @examples
+#'
+#' library(survPen)
+#'
+#' # tensor product between three penalty matrices
+#' set.seed(15)
+#'
+#' S1 <- matrix(rnorm(3*3),nrow=3,ncol=3)
+#' S2 <- matrix(rnorm(2*2),nrow=2,ncol=2)
+#' 
+#' S1 <- 0.5*(S1 + t(S1) ) ; S2 <- 0.5*(S2 + t(S2) )
+#'
+#' tensor.prod.S(list(S1,S2))
+#' 
 tensor.prod.S <- function (S) 
 {
     m <- length(S)
@@ -267,6 +304,7 @@ tensor.prod.S <- function (S)
 #'
 #' @examples
 #' x <- seq(1,10,length=100)
+#' # natural cubic spline with 3 knots
 #' crs(x,knots=c(1,5,10))
 #'
 crs <- function(x, knots=NULL,df=10, intercept=TRUE) {
@@ -409,6 +447,16 @@ crs <- function(x, knots=NULL,df=10, intercept=TRUE) {
 #' \item{P.mat}{penalty matrix}
 #' @export
 #'
+#' @examples
+#'
+#' library(survPen)
+#'
+#' # construction of the penalty matrix using a sequence of knots
+#' knots <- c(0,0.25,0.5,0.75,1)
+#' diff.knots <- diff(knots)
+#'
+#' crs.FP(knots,diff.knots)
+#' 
 crs.FP <- function(knots,h){
   # constraints of second derivatives continuity and nullity beyond the boundaries
 
@@ -614,6 +662,17 @@ rd <- function(...){
 #' \item{name}{simplified name of the call to function smooth.spec}
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 10 unspecified knots
+#' smooth.spec(time)
+#'
+#' # tensor of time and age with 5*5 specified knots
+#' smooth.s <- smooth.spec(time,age,knots=list(time=seq(0,5,length=5),
+#' age=seq(20,80,length=5)), option="tensor")
+#'
 smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=FALSE){
 
   if (is.null(option)) {
@@ -752,6 +811,17 @@ smooth.spec <- function(..., knots=NULL,df=NULL,by=NULL,option=NULL,same.rho=FAL
 #' \item{lambda.name}{name of the smoothing parameters}
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots (so we get a design matrix with 3 columns 
+#' # because of centering constraint)
+#'
+#' data <- data.frame(time=seq(0,5,length=100))
+#' smooth.c <- smooth.cons("time",knots=list(c(0,1,3,5)),df=4,option="smf",
+#' data.spec=data,name="smf(time)")
+#'
 smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=FALSE, name){
 
   if (option=="rd"){
@@ -776,12 +846,12 @@ smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=FA
 	
   }
   
-  
   centering <- TRUE
 
   dim <- length(term)
 
   # for by variables
+  if(!is.character(by)) by <- deparse(by)
   by.var <- eval(parse(text=by),envir=as.environment(data.spec))
   
   if (!is.null(by.var)){ 
@@ -803,11 +873,16 @@ smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=FA
 
   if (option=="smf") sum.temp <- 1
 
+  # if knots do not have names we give them the names of all the terms
+  if (!is.null(knots) & is.null(names(knots))) names(knots) <- term
+  if (is.null(names(df))) names(df) <- term
+  
   knots2 <- vector("list", dim)
-
+  names(knots2) <- term
+  
   for (i in 1:dim){
 
-    Base[[i]] <- crs(eval(parse(text=term[i]),envir=as.environment(data.spec)),knots=knots[[i]],df=df[i],intercept=TRUE)
+    Base[[i]] <- crs(eval(parse(text=term[i]),envir=as.environment(data.spec)),knots=knots[[term[i]]],df=df[[term[i]]],intercept=TRUE)
 
     bs[[i]] <- Base[[i]]$bs
 
@@ -1059,6 +1134,18 @@ smooth.cons <- function(term, knots, df, by=NULL, option, data.spec, same.rho=FA
 #' \item{Z}{List of sum-to-zero constraint matrices}
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' set.seed(15)
+#'
+#' X <- matrix(rnorm(10*3),nrow=10,ncol=3)
+#' S <- matrix(rnorm(3*3),nrow=3,ncol=3) ; S <- 0.5*( S + t(S))
+#'
+#' # applying sum-to-zero constraint to a desgin matrix and a penalty matrix
+#' constr <- constraint(X,S) 
+#'
 constraint <- function(X,S,Z=NULL){
 
   if (is.null(Z)){
@@ -1071,10 +1158,10 @@ constraint <- function(X,S,Z=NULL){
 
   }
 
-  # Reparametrized design matrix
+  # Reparameterized design matrix
   XZ <- X%*%Z
 
-  # Reparametrized penalty matrix (or matrices)
+  # Reparameterized penalty matrix (or matrices)
   if(is.list(S)){
 
 	length.S <- length(S)
@@ -1121,6 +1208,23 @@ constraint <- function(X,S,Z=NULL){
 #' @return design matrix
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots (so we get a design matrix with 3 columns 
+#' # because of centering constraint)
+#'
+#' data <- data.frame(time=seq(0,5,length=100))
+#'
+#' # retrieving sum-to-zero constraint matrices
+#' Z.smf <- smooth.cons("time",knots=list(c(0,1,3,5)),df=4,option="smf",
+#' data.spec=data,name="smf(time)")$Z.smf
+#'
+#' # constructing the design matrices for Gauss-Legendre quadrature
+#' smooth.c.int <- smooth.cons.integral("time",knots=list(c(0,1,3,5)),df=4,option="smf",data.spec=data,
+#' name="smf(time)",Z.smf=Z.smf,Z.tensor=NULL,Z.tint=NULL)
+#'
 smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.smf, Z.tensor, Z.tint, name){
 
   
@@ -1142,6 +1246,7 @@ smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.
   dim <- length(term)
 
   # for by variables
+  if(!is.character(by)) by <- deparse(by)
   by.var <- eval(parse(text=by),envir=as.environment(data.spec))
   
   if (!is.null(by.var)){ 
@@ -1150,6 +1255,10 @@ smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.
 		
   }
   
+  # if knots do not have names we give them the names of all the terms
+  if (!is.null(knots) & is.null(names(knots))) names(knots) <- term
+  if (is.null(names(df))) names(df) <- term
+  
   Base <- vector("list",dim) # list containing all design and penalty matrices for each covariate
   bs <- vector("list", dim) # design matrices
 
@@ -1157,7 +1266,7 @@ smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.
 	
   for (i in 1:dim){
 
-    Base[[i]] <- crs(eval(parse(text=term[i]),envir=as.environment(data.spec)),knots=knots[[i]],df=df[i],intercept=TRUE)
+    Base[[i]] <- crs(eval(parse(text=term[i]),envir=as.environment(data.spec)),knots=knots[[term[i]]],df=df[[term[i]]],intercept=TRUE)
 
     bs[[i]] <- Base[[i]]$bs
 
@@ -1268,6 +1377,12 @@ smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.
 #' @return number representing the nth position of str2 in str1 
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' instr("character test to find the position of the third letter r","r",n=3)
+#'
 instr <- function(str1,str2,startpos=1,n=1){
 			aa=unlist(strsplit(substring(str1,startpos),str2))
 			if(length(aa) < n+1 ) return(0);
@@ -1346,6 +1461,26 @@ instr <- function(str1,str2,startpos=1,n=1){
 #' \item{Z.tensor}{List of matrices that represents the sum-to-zero constraints to apply for \code{\link{tensor}} splines}
 #' \item{Z.tint}{List of matrices that represents the sum-to-zero constraints to apply for \code{\link{tint}} splines}
 #' @export
+#'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#'
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#'
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#'	
+#' # The following code sets up everything we need in order to fit the model
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
 #'
 model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,event.name,expected,expected.name,type,n.legendre,cl){
 
@@ -1496,9 +1631,9 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
     for (i in 1:length.Tens){
 
 		list.tensor[[i]] <- eval(parse(text=Tens[i]))
-
+		
 		temp <- smooth.cons(list.tensor[[i]]$term,list.tensor[[i]]$knots,list.tensor[[i]]$df,list.tensor[[i]]$by,option="tensor",data.spec,list.tensor[[i]]$same.rho,list.tensor[[i]]$name)
-
+       
 		dim.tensor[i] <- length(temp$pen) # number of smoothing parameters in the ith tensor call
 		df.tensor[i] <- NCOL(temp$X) # number of regression parameters
 
@@ -1882,6 +2017,33 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
 #' @return design matrix for the model
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#' 
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#' 
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#' 	
+#' # Setting up the model
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
+#'  
+#' # Retrieving the sum-to-zero constraint matrices and the list of knots
+#' Z.smf <- model.c$Z.smf ; list.smf <- model.c$list.smf
+#' 
+#' # Calculating the design matrix
+#' design.M <- design.matrix(form,data.spec=data,Z.smf=Z.smf,list.smf=list.smf,
+#' Z.tensor=NULL,Z.tint=NULL,list.tensor=NULL,list.tint=NULL,list.rd=NULL)
+#'
 design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd){
 
   formula <- stats::as.formula(formula)
@@ -1983,9 +2145,9 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
     # (there may be several)
 
     for (i in 1:length.Tens){
-
+	
       X.tensor[[i]] <- smooth.cons.integral(list.tensor[[i]]$term,list.tensor[[i]]$knots,list.tensor[[i]]$df,list.tensor[[i]]$by,option="tensor",data.spec,Z.smf=NULL,Z.tensor=Z.tensor[[i]],Z.tint=NULL,list.tensor[[i]]$name)
-
+		
     }
 	
     # We join all design matrices for tensor smooths
@@ -2059,6 +2221,30 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
 #' \item{S.pen.ini}{initial penalty matrices}
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#' 
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#' 
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#' 	
+#' # Setting up the model before fitting
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
+#'  
+#' # Reparameterization allows separating the parameters into unpenalized and 
+#' # penalized ones for maximum numerical stability
+#' re.model.c <- repam(model.c)
+#'
 repam <- function(build){
 	
 	coef.name <- colnames(build$X)
@@ -2112,7 +2298,6 @@ repam <- function(build){
 #' @param X.ini initial design matrix (before reparameterization)
 #' @param S.pen.ini initial penalty matrices
 #' @return survPen object with standard parameterization
-#' @export
 #'
 inv.repam <- function(model,X.ini,S.pen.ini){
 	
@@ -2173,7 +2358,6 @@ inv.repam <- function(model,X.ini,S.pen.ini){
 #'
 #' @param model survPen object, see \code{\link{survPen.fit}} for details
 #' @return survPen object with corrected variance Vc
-#' @export
 #'
 cor.var <- function(model){
 
@@ -2300,6 +2484,8 @@ cor.var <- function(model){
 #' to the effects of the covariates. Thus, time-dependent effects are naturally specified as interactions with some function of time via "*" or ":". See the examples below for more details.
 #' The main functions of the survPen package are \code{\link{survPen}}, \code{\link{smf}}, \code{\link{tensor}}, \code{\link{tint}} and \code{\link{rd}}. The first one fits the model while the other four are constructors for penalized splines. \cr \cr
 #' The user must be aware that the \code{survPen} package does not depend on \code{mgcv}. Thus, all the functionalities available in \code{mgcv} in terms of types of splines (such as thin plate regression splines or P-splines) are not available in \code{survPen} (yet).
+#' 
+#' The \code{survPen} package is described in Fauvernier et al. (2019a) while the method is detailed in Fauvernier et al. (2019b).
 #'
 #' @param formula formula object specifying the model. Penalized terms are specified using \code{\link{smf}} (comparable to \code{s(...,bs="cr")} in \code{mgcv}),
 #' \code{\link{tensor}} (comparable to \code{te(...,bs="cr")} in \code{mgcv}), \code{\link{tint}} (comparable to \code{ti(...,bs="cr")} in \code{mgcv}),
@@ -2330,7 +2516,7 @@ cor.var <- function(model){
 #' the data, the package \code{mgcv} can then be used to fit penalized hazard models (Remontet et al. 2018). The problem with this option is that the setup is rather complex and the method can fail with huge datasets (before splitting).  
 #' Wood et al. (2016) provided a general penalized framework that made available smooth function estimation to a wide variety of models. 
 #' They proposed to estimate smoothing parameters by maximizing a Laplace approximate marginal likelihood (LAML) criterion and demonstrate how statistical consistency is maintained by doing so.
-#' The \code{\link{survPen}} function implements the framework described by Wood et al. (2016) for modelling time-to-event data without requiring data splitting and Poisson likelihood approximation.
+#' The \code{\link{survPen}} function (Fauvernier et al. 2019a) implements the method described in Fauvernier et al. (2019b) which is itself based on the framework proposed by Wood et al. (2016). \code{\link{survPen}} aims at modelling time-to-event data without requiring data splitting and Poisson likelihood approximation.
 #' The effects of continuous covariates are represented using low rank spline bases with associated quadratic penalties. The \code{\link{survPen}} function allows to account simultaneously for time-dependent effects, non-linear effects and
 #' interactions between several continuous covariates without the need to build a possibly demanding model-selection procedure.
 #' Besides LAML, a likelihood cross-validation (LCV) criterion (O Sullivan 1988) can be used for smoothing parameter estimation.
@@ -2397,7 +2583,8 @@ cor.var <- function(model){
 #'
 #' @references
 #' Charvat, H., Remontet, L., Bossard, N., Roche, L., Dejardin, O., Rachet, B., ... and Belot, A. (2016), A multilevel excess hazard model to estimate net survival on hierarchical data allowing for non linear and non proportional effects of covariates. Statistics in medicine, 35(18), 3066-3084. \cr \cr
-#' Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N., Remontet, L. and the CENSUR Working Survival Group. Multidimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, in revision in the Journal of the Royal Statistical Society, series C. \cr \cr
+#' Fauvernier, M., Remontet, L., Uhry, Z., Tron, L., Bossard, N. and Roche, L. (2019a), survPen: an R package for hazard and excess hazard modelling with multidimensional penalized splines,Journal of Open Source Software, 4(40), 1434. doi: 10.21105/joss.01434 \cr \cr
+#' Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N. and Remontet, L. (2019b), Multi-dimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, Journal of the Royal Statistical Society, series C. doi: 10.1111/rssc.12368 \cr \cr
 #' O Sullivan, F. (1988), Fast computation of fully automated log-density and log-hazard estimators. SIAM Journal on scientific and statistical computing, 9(2), 363-379. \cr \cr
 #' Remontet, L., Bossard, N., Belot, A., & Esteve, J. (2007), An overall strategy based on regression models to estimate relative survival and model the effects of prognostic factors in cancer survival studies. Statistics in medicine, 26(10), 2214-2228. \cr \cr
 #' Remontet, L., Uhry, Z., Bossard, N., Iwaz, J., Belot, A., Danieli, C., Charvat, H., Roche, L. and CENSUR Working Survival Group (2018) Flexible and structured survival model for a simultaneous estimation of non-linear and non-proportional effects and complex interactions between continuous variables: Performance of this multidimensional penalized spline approach in net survival trend analysis. Stat Methods Med Res. 2018 Jan 1:962280218779408. doi: 10.1177/0962280218779408. [Epub ahead of print]. \cr \cr
@@ -2883,6 +3070,29 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 #' @return Object of class "survPen" (see \code{\link{survPenObject}} for details)
 #' @export
 #'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#' 
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#' 
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#' 	
+#' # Setting up the model before fitting
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
+#'  
+#' # fitting
+#' mod <- survPen.fit(model.c,data,form)
+#'
 survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.beta=FALSE,method="LAML",tol.beta=1e-04)
 {
   # collecting information from the formula (design matrix, penalty matrices, ...)
@@ -2979,7 +3189,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   beta <- Algo.optim$beta
   names(beta) <- colnames(X)
   ll.unpen <- Algo.optim$ll.unpen
-  ll <- Algo.optim$ll
+  ll.pen <- Algo.optim$ll.pen
   haz.GL <- Algo.optim$haz.GL
   iter.beta <- Algo.optim$iter.beta
   #-------------------------------------------------------------------
@@ -3044,7 +3254,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
   inv.Hess.beta <- -neg.inv.Hess.beta
 
-  neg.Hess.beta <- t(R)%*%R
+  neg.Hess.beta <- crossprod(R)
   Hess.beta <- -neg.Hess.beta
 
   # Variance
@@ -3054,16 +3264,18 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   rownames(Ve) <- colnames(Ve) <- rownames(Vp) <- colnames(Vp) <- colnames(X)
   #-------------------------------------------------------------------
 
+  
   #------------------------------------------------------------------------
   #------------------------------------------------------------------------
-  # Smoothing parameters selection
+  # Smoothing parameter estimation
   #------------------------------------------------------------------------
   #------------------------------------------------------------------------
 
+	
   if(nb.smooth!=0){
 
 	#------------------------------------------------------------------------
-	# LCV criteria
+	# LCV criterion
 	#------------------------------------------------------------------------
 
 	# effective degrees of freedom
@@ -3078,7 +3290,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 			
 	}
 	#------------------------------------------------------------------------
-	# LAML criteria
+	# LAML criterion
 	#------------------------------------------------------------------------
 
 	if (sum(lambda)<.Machine$double.eps) {
@@ -3099,7 +3311,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 	log.det.Hess.beta <- as.numeric(2*determinant(R,logarithm=TRUE)$modulus)
 
 	# this is actually the negative LAML so that we can minimize it
-	LAML <- -(ll+0.5*log.abs.S-0.5*log.det.Hess.beta+0.5*M.p*log(2*pi))
+	LAML <- -(ll.pen+0.5*log.abs.S-0.5*log.det.Hess.beta+0.5*M.p*log(2*pi))
 
 	if(method=="LAML"){
 
@@ -3129,8 +3341,8 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
 			# this calculation is done before to save time
 			mat.temp <- inv.Hess.beta+Ve
-
-			# gradient of LCV
+			
+			#------------------------------- gradient of LCV
 
 			grad.rho.edf <- vector(length=nb.smooth)
 			deriv.rho.Hess.unpen.beta <- vector("list", nb.smooth)
@@ -3203,7 +3415,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
 			deriv.mat.temp <- lapply(1:nb.smooth, function(j2) deriv.rho.Ve[[j2]]+deriv.rho.inv.Hess.beta[[j2]] )
 
-			# Hessian of LCV
+			#------------------------------- Hessian of LCV
 
 			Hess.edf <- matrix(0,nb.smooth,nb.smooth)
 
@@ -3212,19 +3424,38 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 			}
 
 			# second derivatives of the beta Hessian
+			
+			# if we perform an eigen decomposition of mat.temp, we only need to compute the diagonal of 
+			# the second derivatives of Hess.unpen.beta (see section 6.6.2 of Wood (2017) Generalized Additive Models
+			# An introduction with R, Second Edition)
+					eigen2 <- eigen(mat.temp,symmetric=TRUE)
+					eigen.mat.temp <- eigen2$values
+					Q <- eigen2$vectors
+					
+					# then we multiply each design matrix (including the ones for Gauss-Legendre quadrature) by Q
+					X.GL2 <- lapply(1:n.legendre,function(i) X.GL[[i]]%*%Q)
+
+					X.GL2.w.tm <- lapply(1:n.legendre, function(i) X.GL2[[i]]*leg$weights[i]*tm)
+		  
+					X2 <- X%*%Q
+					
+					eventXexpected2 <- event*X2*expected
+			#----------------------------------------------------------------------------------------
+			
 			for (j in 1:nb.smooth){
 
 				for (j2 in 1:nb.smooth){
 
-					f.fourth <- matrix(0,nrow=p,ncol=p)
+					diag.f.fourth <- rep(0,p)
 
 					for (i in 1:n.legendre){
 
 						temp <- (X.GL[[i]]*GL.temp[[j2]][[i]])%*%deriv.rho.beta[j,]+
 						as.vector((X.GL[[i]]*haz.GL[[i]])%*%deriv2.rho.beta[[j2]][j,])
 
-						f.fourth <- f.fourth+T.X.GL[[i]]%*%(X.GL.w.tm[[i]]*as.vector(temp))
-
+						# using the transformed design matrices
+						diag.f.fourth <- diag.f.fourth + colSums(X.GL2[[i]] * X.GL2.w.tm[[i]]*as.vector(temp))
+						
 					}
 
 					if (type=="net"){
@@ -3232,17 +3463,18 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 						temp2 <- as.vector((X*as.vector(temp2.matrix1%*%deriv.rho.beta[j2,]))%*%deriv.rho.beta[j,])+
 						as.vector(temp2.matrix2%*%deriv2.rho.beta[[j2]][j,])
 
-						deriv2.rho.Hess.unpen.beta <- (-f.fourth) + T.X%*%(eventXexpected*as.vector(temp2))
-
+						# using the transformed design matrices
+						diag.deriv2.Hess.unpen.beta <- (-diag.f.fourth) + colSums(X2 * (eventXexpected2*as.vector(temp2)))
+							
+						
 					}else{
 
-						deriv2.rho.Hess.unpen.beta <- (-f.fourth)
+						diag.deriv2.Hess.unpen.beta <- (-diag.f.fourth)
 
 					}
 
 					# Hessian of edf
-
-					Hess.edf[j,j2] <- sum(mat.temp*deriv2.rho.Hess.unpen.beta)+
+					Hess.edf[j,j2] <- sum(eigen.mat.temp*diag.deriv2.Hess.unpen.beta)+
 					sum(deriv.mat.temp[[j2]]*deriv.rho.Hess.unpen.beta[[j]])+sum(-deriv.rho.Ve[[j2]]*S.list[[j]])
 
 					if (j==j2){
@@ -3265,13 +3497,33 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
 		if(method=="LAML"){
 
-			inverse.new.S <- solve.default(sub.S) # stable LU decomposition through solve.default that
+			# stable LU decomposition through solve.default that
 			# calls an internal R function written in C called La_solve. La_solve itself calls a Fortran routine
 			# called DGESV from LAPACK
+			inverse.new.S <- try(solve.default(sub.S),silent=TRUE) 
+			
+			
+			if (class(inverse.new.S) == "try-error"){
+				
+				cat("\n","LU decomposition failed to invert penalty matrix, trying QR","\n",
+				"set detail.rho=TRUE for details","\n")
+				
+				inverse.new.S <- try(qr.solve(qr.S))
+			
+			}
+			
+			if (class(inverse.new.S) == "try-error"){
 
+				cat("\n","LU and QR decompositions failed to invert penalty matrix, trying Cholesky","\n",
+				"set detail.rho=TRUE for details","\n")
+			
+				inverse.new.S <- chol2inv(chol(sub.S))
+			
+			}
+			
 			temp.LAML <- lapply(1:nb.smooth,function(i) S.list[[i]][1:rank.S,1:rank.S])
 
-			# gradient of LAML
+			#------------------------------- gradient of LAML
 
 			grad.rho.log.det.Hess.beta <- vector(length=nb.smooth)
 			grad.rho.log.abs.S <- vector(length=nb.smooth)
@@ -3335,7 +3587,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 			# this calculation is done before to save time
 			temp.LAML3 <- lapply(1:nb.smooth,function(i) -inverse.new.S%*%temp.LAML[[i]]%*%inverse.new.S)
 			
-			# second derivatives of LAML
+			#------------------------------- Hessian of LAML
 
 			Hess.rho.log.det.Hess.beta <- matrix(0,nb.smooth,nb.smooth)
 
@@ -3346,21 +3598,41 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 			if (type=="net"){
 				temp2.matrix1 <- (X*ft1*(ft1^2-4*expected*ft1+expected^2)/(ft1+expected)^4)
 			}
+			
 			# second derivatives of the beta Hessian
 
+			# if we perform an eigen decomposition of -inv.Hess.beta, we only need to compute the diagonal of 
+			# the second derivatives of Hess.unpen.beta (see section 6.6.2 of Wood (2017) Generalized Additive Models
+			# An introduction with R, Second Edition)
+					eigen2 <- eigen(-inv.Hess.beta,symmetric=TRUE)
+					minus.eigen.inv.Hess.beta <- eigen2$values
+					Q <- eigen2$vectors
+					
+					# then we multiply each design matrix (including the ones for Gauss-Legendre quadrature) by Q
+					X.GL2 <- lapply(1:n.legendre,function(i) X.GL[[i]]%*%Q)
+
+					X.GL2.w.tm <- lapply(1:n.legendre, function(i) X.GL2[[i]]*leg$weights[i]*tm)
+		  
+					X2 <- X%*%Q
+					
+					eventXexpected2 <- event*X2*expected
+			#----------------------------------------------------------------------------------------
+			
 			for (j in 1:nb.smooth){
 
 				for (j2 in 1:nb.smooth){
 
-					f.fourth <- matrix(0,nrow=p,ncol=p)
+					diag.f.fourth <- rep(0,p)
 
 					for (i in 1:n.legendre){
 
 						temp <- (X.GL[[i]]*GL.temp[[j2]][[i]])%*%deriv.rho.beta[j,]+
 						as.vector((X.GL[[i]]*haz.GL[[i]])%*%deriv2.rho.beta[[j2]][j,])
 
-						f.fourth <- f.fourth+T.X.GL[[i]]%*%(X.GL.w.tm[[i]]*as.vector(temp))
-
+						# using the transformed design matrices
+						diag.f.fourth <- diag.f.fourth + colSums(X.GL2[[i]] * X.GL2.w.tm[[i]]*as.vector(temp))
+						
+						
 					}
 
 					if (type=="net"){
@@ -3368,17 +3640,20 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 						temp2 <- as.vector((X*as.vector(temp2.matrix1%*%deriv.rho.beta[j2,]))%*%deriv.rho.beta[j,])+
 						as.vector(temp2.matrix2%*%deriv2.rho.beta[[j2]][j,])
 
-						deriv2.Hess.unpen.beta <- (-f.fourth) + T.X%*%(eventXexpected*as.vector(temp2))
-
+						# using the transformed design matrices	
+						diag.deriv2.Hess.unpen.beta <- (-diag.f.fourth) + colSums(X2 * (eventXexpected2*as.vector(temp2)))
+						
+							
+						
 					}else{
 
-						deriv2.Hess.unpen.beta <- (-f.fourth)
+						diag.deriv2.Hess.unpen.beta <- (-diag.f.fourth)
 
 					}
 
 					Hess.rho.log.det.Hess.beta[j,j2] <- sum(-deriv.rho.inv.Hess.beta[[j2]]*(-deriv.rho.Hess.unpen.beta[[j]]+S.list[[j]]))+
-					sum(-inv.Hess.beta*(-deriv2.Hess.unpen.beta))
-
+					sum(-minus.eigen.inv.Hess.beta*diag.deriv2.Hess.unpen.beta)
+					
 					Hess.rho.log.abs.S[j,j2] <- sum(temp.LAML3[[j2]]*temp.LAML[[j]])
 
 					Hess.rho.ll1[j,j2] <- -as.numeric(deriv.rho.beta[j2,]%*%S.beta[[j]])
@@ -3422,7 +3697,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 	haz=ft1,coefficients=beta,type=type,df.para=df.para,df.smooth=df.smooth,p=p,edf=edf,edf2=edf2,aic=2*sum(edf)-2*ll.unpen,aic2=aic2,iter.beta=iter.beta,X=X,S=S,S.scale=S.scale,
 	S.list=S.list,S.smf=S.smf,S.tensor=S.tensor,S.tint=S.tint,S.rd=S.rd,smooth.name.smf=smooth.name.smf,smooth.name.tensor=smooth.name.tensor,smooth.name.tint=smooth.name.tint,smooth.name.rd=smooth.name.rd,
 	S.pen=build$S.pen,grad.unpen.beta=grad.unpen.beta,grad.beta=grad.beta,Hess.unpen.beta=Hess.unpen.beta,Hess.beta=Hess.beta,
-	Hess.beta.modif=Hess.beta.modif,ll.unpen=ll.unpen,ll=ll,deriv.rho.beta=deriv.rho.beta,deriv.rho.inv.Hess.beta=deriv.rho.inv.Hess.beta,lambda=lambda,
+	Hess.beta.modif=Hess.beta.modif,ll.unpen=ll.unpen,ll.pen=ll.pen,deriv.rho.beta=deriv.rho.beta,deriv.rho.inv.Hess.beta=deriv.rho.inv.Hess.beta,lambda=lambda,
 	nb.smooth=nb.smooth,iter.rho=iter.rho,optim.rho=optim.rho,method=method,criterion.val=criterion.val,LCV=LCV,LAML=LAML,grad.rho=grad.rho,Hess.rho=Hess.rho,inv.Hess.rho=inv.Hess.rho,
 	Hess.rho.modif=Hess.rho.modif,Ve=Ve,Vp=Vp,Vc=Vc,Vc.approx=Vc.approx,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,
 	list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd,U.F=U.F)
@@ -3468,6 +3743,22 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 #' @references
 #' Wood, S.N., Pya, N. and Saefken, B. (2016), Smoothing parameter and model selection for general smooth models (with discussion). Journal of the American Statistical Association 111, 1548-1575
 #'
+#' @examples
+#'
+#' library(survPen)
+#'
+#' data(datCancer) # simulated dataset with 2000 individuals diagnosed with cervical cancer
+#'
+#' # model : unidimensional penalized spline for time since diagnosis with 5 knots
+#' f1 <- ~smf(fu,df=5)
+#'
+#' # hazard model
+#' mod1 <- survPen(f1,data=datCancer,t1=fu,event=dead,expected=NULL,method="LAML")
+#'
+#' # predicting hazard and survival at time 1
+#' pred <- predict(mod1,data.frame(fu=1))
+#' pred$haz
+#' pred$surv
 #'
 predict.survPen <- function(object,newdata,n.legendre=50,conf.int=0.95,do.surv=TRUE,type="standard",exclude.random=FALSE,get.deriv.H=FALSE,...){
 
@@ -3633,6 +3924,21 @@ predict.survPen <- function(object,newdata,n.legendre=50,conf.int=0.95,do.surv=T
 #' \item{converged}{convergence indicator, TRUE or FALSE. TRUE if Hess.beta.modif=FALSE and Hess.rho.modif=FALSE (or NULL)}
 #' @export
 #'
+#' @examples
+#'
+#' library(survPen)
+#'
+#' data(datCancer) # simulated dataset with 2000 individuals diagnosed with cervical cancer
+#'
+#' # model : unidimensional penalized spline for time since diagnosis with 5 knots
+#' f1 <- ~smf(fu,df=5)
+#'
+#' # fitting hazard model
+#' mod1 <- survPen(f1,data=datCancer,t1=fu,event=dead,expected=NULL,method="LAML")
+#'
+#' # summary
+#' summary(mod1)
+#'
 summary.survPen <- function(object,...){
 
 	if (!inherits(object,"survPen")) stop("object is not of class survPen")
@@ -3750,7 +4056,7 @@ summary.survPen <- function(object,...){
 			random=random,
 			random.effects=TAB.random,
 			likelihood = object$ll.unpen,
-			penalized.likelihood = object$ll,
+			penalized.likelihood = object$ll.pen,
 			nb.smooth = object$nb.smooth,
 			smoothing.parameter = object$lambda,
 			parameters = object$p,
@@ -3783,7 +4089,7 @@ summary.survPen <- function(object,...){
 #' @param x an object of class \code{summary.survPen}
 #' @param ... other arguments
 #' @return print of summary
-#' @export
+#'
 print.summary.survPen <- function(x, ...)
 {
 	cat(paste(noquote(x$type),"\n","\n"))
@@ -3804,11 +4110,8 @@ print.summary.survPen <- function(x, ...)
 	
 	if (substr(x$type,1,9)=="penalized"){
 
-		#cat("\nEffective degrees of freedom for smooth terms:\n")
-		#print(x$smooth.terms)
-	
 		cat("\n")
-		cat(paste("likelihood=",signif(x$likelihood,signif.precision),",","penalized likelihood=",signif(x$penalized.likelihood,signif.precision)))
+		cat(paste("log-likelihood=",signif(x$likelihood,signif.precision),",","penalized log-likelihood=",signif(x$penalized.likelihood,signif.precision)))
 
 		cat("\n")
 		cat(paste("Number of parameters=",x$parameters,",","effective degrees of freedom=",signif(x$edf,signif.precision)))
@@ -3860,17 +4163,40 @@ print.summary.survPen <- function(x, ...)
 #' @param tol.beta convergence tolerance for regression parameters; default is \code{1e-04}
 #'
 #' @details
-#' If we note \code{ll} and \code{beta} respectively the current penalized log-likelihood and estimated parameters and
-#' \code{llold} and \code{betaold} the previous ones, the algorithm goes on while
-#' (abs(ll-llold)>tol.beta) or any(abs((beta-betaold)/betaold)>tol.beta)
+#' If we note \code{ll.pen} and \code{beta} respectively the current penalized log-likelihood and estimated parameters and
+#' \code{ll.pen.old} and \code{betaold} the previous ones, the algorithm goes on while
+#' (abs(ll.pen-ll.pen.old)>tol.beta) or any(abs((beta-betaold)/betaold)>tol.beta)
 #'
 #' @return List of objects:
 #' \item{beta}{estimated regression parameters}
 #' \item{ll.unpen}{log-likelihood at convergence}
-#' \item{ll}{penalized log-likelihood at convergence}
+#' \item{ll.pen}{penalized log-likelihood at convergence}
 #' \item{haz.GL}{list of all the matrix-vector multiplications X.GL[[i]]\%*\%beta for Gauss Legendre integration. Useful to avoid repeating operations in \code{\link{survPen.fit}}}
 #' \item{iter.beta}{number of iterations needed to converge}
 #' @export
+#'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#' 
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#' 
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#' 	
+#' # Setting up the model before fitting
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
+#'  
+#' # Estimating the regression parameters at given smoothing parameter (here lambda=0)
+#' Newton1 <- NR.beta(model.c,beta.ini=rep(0,4),detail.beta=TRUE)
 #'
 NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
@@ -3894,8 +4220,8 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	p <- build$p # number of regression parameters
 
 	k=1
-	ll=100
-	llold=1
+	ll.pen=100
+	ll.pen.old=1
 
 	if (length(beta.ini)==1) beta.ini <- rep(beta.ini,p)
 	
@@ -3911,7 +4237,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	
     }
 	# beginning of the while loop
-	while(abs(ll-llold)>tol.beta|any(abs((beta1-betaold)/betaold)>tol.beta))
+	while(abs(ll.pen-ll.pen.old)>tol.beta|any(abs((beta1-betaold)/betaold)>tol.beta))
 	{
 
 		if(k > max.it.beta)
@@ -3922,7 +4248,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 		if(k>=2)
 		{
-			llold=ll
+			ll.pen.old <- ll.pen
 			betaold <- beta1
 		}
 
@@ -4006,9 +4332,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 			ll.unpenold <- sum(-integral + event*predold)
 		}
 
-		llold <- ll.unpenold-as.numeric(t(betaold)%*%S%*%betaold)*0.5
+		ll.pen.old <- ll.unpenold-as.numeric(t(betaold)%*%S%*%betaold)*0.5
 
-		if (is.nan(llold)) stop("message NR.beta: convergence issues, cannot evaluate log-likelihood")
+		if (is.nan(ll.pen.old)) stop("message NR.beta: convergence issues, cannot evaluate log-likelihood")
 
 		# New set of parameters
 		pas <- as.vector(neg.inv.Hess%*%grad)
@@ -4034,15 +4360,15 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 			ll.unpen <- sum(-integral + event*pred1)
 		}
 		
-		ll <- ll.unpen-as.numeric(t(beta1)%*%S%*%beta1)*0.5
+		ll.pen <- ll.unpen - as.numeric(t(beta1)%*%S%*%beta1)*0.5
 
-		if (is.nan(ll)) {ll <- llold-1}
+		if (is.nan(ll.pen)) {ll.pen <- ll.pen.old - 1}
 		
-		if (ll<llold-1e-03){ # at each step, the current log-likelihood should not be inferior to
+		if (ll.pen < ll.pen.old - 1e-03){ # at each step, the current log-likelihood should not be inferior to
 		# the previous one with a certain tolerence (1e-03)
 			cpt.beta <- 1
 			# if the penalized log-likelihood is not maximized, the step is halved until it is
-			while (ll<llold-1e-03){
+			while (ll.pen < ll.pen.old - 1e-03){
 
 				if(cpt.beta>52) stop("message NR.beta: step has been divided by two 52 times in a row, Log-likelihood could not be optimized")
 				# we use 52 because 2^(-52) is machine precision
@@ -4070,9 +4396,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 					ll.unpen <- sum(-integral + event*pred1)
 				}
 
-				ll <- ll.unpen-as.numeric(t(beta1)%*%S%*%beta1)*0.5
+				ll.pen <- ll.unpen - as.numeric(t(beta1)%*%S%*%beta1)*0.5
 
-				if (is.nan(ll)) {ll <- llold-1}
+				if (is.nan(ll.pen)) {ll.pen <- ll.pen.old - 1}
 			}
 
 		}
@@ -4083,9 +4409,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 			  "betaold= ", round(betaold,4),"\n",
 			  "beta= ", round(beta1,4),"\n",
 			  "abs((beta-betaold)/betaold)= ", round(abs((beta1-betaold)/betaold),5),"\n",
-			  "llold= ", round(llold,4),"\n",
-			  "ll= ", round(ll,4),"\n",
-			  "ll-llold= ", round(ll-llold,5),"\n",
+			  "ll.pen.old= ", round(ll.pen.old,4),"\n",
+			  "ll.pen= ", round(ll.pen,4),"\n",
+			  "ll.pen-ll.pen.old= ", round(ll.pen-ll.pen.old,5),"\n",
 			  "\n"
 		  )
 		}
@@ -4103,7 +4429,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 	}
 
-	list(beta=beta1,ll.unpen=ll.unpen,ll=ll,haz.GL=haz.GL,iter.beta=k-1)
+	list(beta=beta1,ll.unpen=ll.unpen,ll.pen=ll.pen,haz.GL=haz.GL,iter.beta=k-1)
 
 }
 
@@ -4142,6 +4468,30 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 #'
 #' @return object of class survPen (see \code{\link{survPen.fit}} for details)
 #' @export
+#'
+#' @examples
+#' 
+#' library(survPen)
+#'
+#' # standard spline of time with 4 knots
+#'
+#' data <- data.frame(time=seq(0,5,length=100),event=1,t0=0)
+#' 
+#' form <- ~ smf(time,knots=c(0,1,3,5))
+#' 
+#' t1 <- eval(substitute(time), data)
+#' t0 <- eval(substitute(t0), data)
+#' event <- eval(substitute(event), data)
+#' 	
+#' # Setting up the model before fitting
+#' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
+#' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
+#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' cl="survPen(form,data,t1=time,event=event)")
+#'  
+#' # Estimating the smoothing parameter and the regression parameters
+#' # we need to apply a reparameterization to model.c before fitting
+#' Newton2 <- NR.rho(repam(model.c)$build,rho.ini=-1,data,form,nb.smooth=1,detail.rho=TRUE)
 #'
 NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta.ini=NULL,detail.rho=FALSE,detail.beta=FALSE,nb.smooth,tol.beta=1e-04,tol.rho=1e-04,step.max=5,method="LAML"){
 
@@ -4419,7 +4769,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 	model$inv.Hess.rho <- chol2inv(R)
 	
-	model$Hess.rho <- t(R)%*%R
+	model$Hess.rho <- crossprod(R)
 	
 	model$Hess.rho.modif <- Hess.rho.modif
 
@@ -4446,4 +4796,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 
 #################################################################################################################
+
+
+
 
