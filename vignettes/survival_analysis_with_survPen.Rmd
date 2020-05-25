@@ -293,6 +293,28 @@ lines(new.time,pred.pen$surv.inf,lty=2)
 lines(new.time,pred.pen$surv.sup,lty=2)
 ```
 
+
+Hazard ratios and associated confidence intervals can be calculated directly
+
+
+The following example constructs a model with a tensor product spline of time and age 
+(see below for details about those models).
+We then predict the hazard ratio between ages 70 and 30 according to time using the type="HR" argument. 
+
+```{r, fig.show='hold'}
+f.pen.age <- ~tensor(fu,age,df=c(5,5)) # see below for explanations about tensor models
+mod.pen.age <- survPen(f.pen.age,data=datCancer,t1=fu,event=dead)
+pred.pen.HR <- predict(mod.pen.age,data.frame(fu=new.time,age=70),newdata.ref=data.frame(fu=new.time,age=30),type="HR")
+
+par(mfrow=c(1,1))
+plot(new.time,pred.pen.HR$HR,type="l",ylim=c(0,15),main="Hazard ratio with CIs",
+xlab="time since diagnosis (years)",ylab="hazard ratio",col="red",lwd=lwd1)
+lines(new.time,pred.pen.HR$HR.inf,lty=2)
+lines(new.time,pred.pen.HR$HR.sup,lty=2)
+
+```
+
+
 ### Making your own predictions
 
 Besides the basics hazard and survival predictions, the user may use the predict

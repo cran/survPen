@@ -1,3 +1,13 @@
+survPen v1.4.5
+==============
+
+Changes:
+* Gradient and Hessian of LCV and LAML are coded in compiled C code. The associated code has also been reorganized
+* colSums and cor.var are also rewritten in C
+* hazard ratios and associated CIs added to predict method
+* edf1 is taken as an upper bound for edf2 (as in mgcv)
+
+
 survPen v1.3.0
 ==============
 
