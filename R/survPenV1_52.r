@@ -2866,9 +2866,8 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 	
 	t1.name <- deparse(substitute(t1))
 	t1 <- eval(substitute(t1), data)
-
-	if (!is.numeric(t1)) stop("t1 variable is not numeric")
-
+	t1 <- as.numeric(t1)
+	
 	n <- length(t1)
 
 	t0.name <- deparse(substitute(t0))
@@ -2879,22 +2878,38 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 	expected.name <- deparse(substitute(expected))
 	expected <- eval(substitute(expected), data)
-
+	
 	if (is.null(expected)){
 	
 		type <- "overall"
+		expected <- rep(0,n)
 		
 	}else{
 	
 		type <- "net"
-		
+		expected <- as.numeric(expected)
 	}
 
-	if (is.null(t0)) t0 <- rep(0,n)
+	if (is.null(t0)){
+	
+		t0 <- rep(0,n)
+	
+	}else{
+		
+		t0 <- as.numeric(t0)
+	}
+		
 	if (length(t0) == 1) t0 <- rep(t0,n)
 	
-	if (is.null(event)) event <- rep(1,n)
-	if (is.null(expected)) expected <- rep(0,n)
+	if (is.null(event)){ 
+	
+		event <- rep(1,n)
+		
+	}else{
+	
+		event <- as.numeric(event)
+	
+	} 
 
 	if (any(t0>t1)) stop("some t0 values are superior to t1 values")
 	if (length(t0) != n) stop("t0 and t1 are different lengths")

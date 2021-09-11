@@ -353,7 +353,7 @@ summary(haz.sup - pred.pen$haz.sup)
 ### Summary of the model
 
 Let's look at the summary of *mod.pen*
-```{r, fig.show='hold'}
+```{r, echo=TRUE}
 summary(mod.pen)
 ```
 
