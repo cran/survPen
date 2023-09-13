@@ -18,8 +18,8 @@ f.cst <- ~1
 mod.cst <- survPen(f.cst,data=datCancer,t1=fu,event=dead)
 
 ## ---- fig.show='hold'---------------------------------------------------------
-f.pwcst <- ~cut(fu,breaks=seq(0,5,by=0.5),include.lowest=TRUE)
-mod.pwcst <- survPen(f.pwcst,data=datCancer,t1=fu,event=dead,n.legendre=200)
+f.pwcst <- ~pwcst(breaks=seq(0,5,by=0.5))
+mod.pwcst <- survPen(f.pwcst,data=datCancer,t1=fu,event=dead)
 
 ## ---- fig.show='hold'---------------------------------------------------------
 f.lin <- ~fu

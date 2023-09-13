@@ -113,6 +113,8 @@ NULL
 #' \item{list.tint}{List of all \code{tint.smooth.spec} objects contained in the model}
 #' \item{list.rd}{List of all \code{rd.smooth.spec} objects contained in the model}
 #' \item{U.F}{Eigen vectors of S.F, useful for the initial reparameterization to separate penalized ad unpenalized subvectors. Allows stable evaluation of the log determinant of S and its derivatives}
+#' \item{is.pwcst}{TRUE if there is a piecewise constant (excess) hazard specification. In that case the cumulative hazard can be derived without Gauss-Legendre quadrature}
+#' \item{pwcst.breaks}{if is.pwcst is TRUE, vector of breaks defining the sub-intervals on which the hazard is constant. Otherwise NULL.}
 #' \item{factor.structure}{List containing the levels and classes of all factor variables present in the data frame used for fitting}
 #' \item{converged}{convergence indicator, TRUE or FALSE. TRUE if Hess.beta.modif=FALSE and Hess.rho.modif=FALSE (or NULL)}
 #'
@@ -639,10 +641,60 @@ rd <- function(...){
 
 
 
+#----------------------------------------------------------------------------------------------------------------
+# pwcst : key word to specify a piecewise constant (excess) hazard
+#----------------------------------------------------------------------------------------------------------------
+
+#' Defining piecewise constant (excess) hazard in survPen formulae
+#'
+#' Used inside a formula object to define a piecewise constant (excess) hazard. This is useful since it triggers an 
+#' explicit calculation of cumulative hazard calculation (much more efficient and more precise than Gauss-Legendre
+#' quadrature when hazard is constant).
+#' The breaks given are used to defined sub-intervals that are left-open (except the first interval which is always 
+#' left-closed) and right-closed. Internally, this constructor uses the cut function on the follow-up time with options 
+#' include.lowest=TRUE and right=TRUE
+#' Important : this function must not be used with other time-dependent effect functions because the Gauss-Legendre quadrature
+#' will not operate correctly. If you really want to fit such a model, please use the cut function with the time variable as
+#' an argument to fit a piecewise constant hazard (and do not forget to use a huge number of Gauss-Legendre quadrature nodes,
+#' typically n.legendre=500)
+#'
+#' @param breaks numeric vector that specifies the boundaries of each sub-interval on which the hazard is constant
+#' @return object of class \code{pwcst.spec}
+#' \item{pwcst.breaks}{numeric vector that specifies the boundaries of each sub-interval on which the hazard is constant}
+#' @export
+#'
+#' @examples
+#' library(survPen)
+#'
+#' data(datCancer)
+#'
+#' # piece constant hazard on 6 sub-intervals : [0;0.5]; ]0.5;1]; ]1;2]; ]2;3]; ]3;4]; ]4;5]
+#' formula <- ~pwcst(breaks=c(0,0.5,1,2,3,4,5))
+#' mod <- survPen(formula,t1=fu,event=dead,data=datCancer)
+#'
+#' # The same but in an inefficient way
+#' formula2 <- ~cut(fu,breaks=c(0,0.5,1,2,3,4,5),include.lowest=TRUE,right=TRUE)
+#' mod.inefficient <- survPen(formula2,t1=fu,event=dead,data=datCancer,n.legendre=500)
+#'
+pwcst <- function(breaks){
+
+	spec <- list(pwcst.breaks=breaks)
+	class(spec) <- "pwcst.spec"
+	spec
+
+}
+
+#----------------------------------------------------------------------------------------------------------------
+# End of code : pwcst
+#----------------------------------------------------------------------------------------------------------------
+
+
+
+
 
 
 #----------------------------------------------------------------------------------------------------------------
-# smooth.spec : function called by the wrappers smf, tensor and tint
+# smooth.spec : function called by the wrappers smf, tensor, tint and rd
 # The function does not construct any bases or penalty matrices, it just specifies the covariates
 # that will be dealt as penalized splines, the dimensions of those splines, plus all the knots and
 # degrees of freedom
@@ -1374,7 +1426,8 @@ smooth.cons.integral <- function(term, knots, df, by=NULL, option, data.spec, Z.
 
 #' Position of the nth occurrence of a string in another one
 #'
-#' Returns the position of the nth occurrence of str2 in str1. Returns 0 if str2 is not found
+#' Returns the position of the nth occurrence of str2 in str1. Returns 0 if str2 is not found.
+#' This code was first suggested by Abdelmonem Mahmoud Amer in https://stackoverflow.com/a/33005653/5421090
 #'
 #' @param str1 main string in which str2 is to be found
 #' @param str2 substring contained in str1
@@ -1427,12 +1480,15 @@ instr <- function(str1,str2,startpos=1,n=1){
 #' @return List of objects with the following items:
 #' \item{cl}{original \code{survPen} call}
 #' \item{type}{"net" or "overall"}
-#' \item{n.legendre}{number of nodes for Gauss-Legendre quadrature}
+#' \item{n.legendre}{number of nodes for Gauss-Legendre quadrature. If is.pwcst is TRUE, for simplicity of implementation, n.legendre actually corresponds to the number of sub-intervals}
 #' \item{n}{number of individuals}
 #' \item{p}{number of parameters}
 #' \item{X.para}{design matrix associated with fully parametric parameters (unpenalized)}
 #' \item{X.smooth}{design matrix associated with the penalized parameters}
 #' \item{X}{design matrix for the model}
+#' \item{is.pwcst}{TRUE if there is a piecewise constant (excess) hazard specification. In that case the cumulative hazard can be derived without Gauss-Legendre quadrature}
+#' \item{pwcst.breaks}{if is.pwcst is TRUE, vector of breaks defining the sub-intervals on which the hazard is constant. Otherwise NULL.}
+#' \item{pwcst.weights}{if is.pwcst is TRUE, matrix of weights giving the time contribution of each individual on each sub-interval. Otherwise NULL.}
 #' \item{leg}{list of nodes and weights for Gauss-Legendre integration on [-1;1] as returned by \code{\link[statmod]{gauss.quad}}}
 #' \item{X.GL}{list of matrices (\code{length(X.GL)=n.legendre}) for Gauss-Legendre quadrature}
 #' \item{S}{penalty matrix for the model. Sum of the elements of \code{S.list}}
@@ -1507,6 +1563,10 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
 
   }
 
+
+  # indice of piecewise constant hazard term
+  ind.pwcst <- grep("^pwcst\\(", tmp)
+  
   # indices of smooth terms
   ind.smf <- grep("^smf\\(", tmp)
 
@@ -1522,6 +1582,8 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   Tint <- tmp[ind.tint]
   Rd <- tmp[ind.rd]
 
+  is.pwcst <- FALSE
+  
   smooth.smf <- FALSE
   smooth.tensor <- FALSE
   smooth.tint <- FALSE
@@ -1538,13 +1600,29 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   if (length.Tint!=0) smooth.tint <- TRUE
   if (length.Rd!=0) smooth.rd <- TRUE
   
+  
+  # if a piecewise constant hazard specification is present we need to add it to the parametric formula by using the cut function internally
+  if (length(ind.pwcst)!=0) {
+  
+	if (length(ind.pwcst)>1) stop("You cannot use several piecewise constant specification terms")
+  
+	is.pwcst <- TRUE
+	intercept <- "-1"
+	
+	pwcst.obj <- eval(parse(text=tmp[ind.pwcst]))
+	pwcst.formula <- paste0("cut(",t1.name,",breaks=c(",paste(pwcst.obj$pwcst.breaks,collapse=','),"),include.lowest=TRUE,right=TRUE)")
+	
+	# adding pwcst formula to formula
+	tmp <- c(tmp, pwcst.formula)
+  }
+  
   # full parametric terms
-  if (smooth.smf | smooth.tensor | smooth.tint | smooth.rd){
-    Para <- tmp[-c(ind.smf,ind.tensor,ind.tint,ind.rd)]
+  if (is.pwcst | smooth.smf | smooth.tensor | smooth.tint | smooth.rd){
+    Para <- tmp[-c(ind.pwcst,ind.smf,ind.tensor,ind.tint,ind.rd)]
   }else{
     Para <- tmp
   }
-
+	
   # parametric formula
   if (length(Para)==0){
     formula.para <- stats::as.formula("~1")
@@ -1556,7 +1634,22 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   X.para <- stats::model.matrix(formula.para,data=data.spec)
 	
   df.para <- NCOL(X.para)
+  
+  #--------------------- new colnames (change from 'cut(....)[interval]' to a more concise 'pwcst[interval]')
+  if(is.pwcst){ 
+  
+  colnames.para <- colnames(X.para)
 
+  # indexes of pwcst colnames in X.para
+  ind.colnames.pwcst <- grep(paste0("^cut\\(",t1.name), colnames.para)
+
+  # position of the last character to replace in colnames
+  last.replace <- instr(colnames.para[ind.colnames.pwcst],")",n=2)
+
+  # new colnames
+  colnames(X.para)[ind.colnames.pwcst] <- sapply(colnames.para[ind.colnames.pwcst], function(x) gsub(substr(x,start=1,stop=last.replace),"pwcst",x,fixed=TRUE))
+  }
+  
   # Initialization of smooth matrices
   X.smf <- NULL
   X.tensor <- NULL
@@ -1961,24 +2054,81 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   #-------------------------------------------------------------------
   # Design matrices for Gauss-Legendre quadrature
 
-  leg <- statmod::gauss.quad(n=n.legendre,kind="legendre")
-
   X.func <- function(t1,t1.name,data,formula,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd){
 
     data.t <- data
     data.t[,t1.name] <- t1
-    design.matrix(formula,data.spec=data.t,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd)
+    design.matrix(formula,data.spec=data.t,t1.name=t1.name,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd)
 
   }
+  
+  if (is.pwcst){ # if there is a piecewise constant hazard we do not use Gauss-Legendre but an explicit integral calculation
+  
+  
+	leg <- NULL
+	tm <- NULL
+  
+	pwcst.breaks <- pwcst.obj$pwcst.breaks
+	pwcst.nodes <- pwcst.breaks[2:length(pwcst.breaks)]
+  
+	n.legendre <- length(pwcst.nodes)
+  
+	X.GL <- lapply(1:n.legendre, function(i) X.func(pwcst.nodes[i],t1.name,data.spec,formula,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd))
+  
+	#-------------------- weights calculation, we need to calculate the contribution of each individual (depending on t0 and t1) on each sub-interval (defined by pwcst.breaks)
+
+	# maximum contribution on each interval
+	max_interval <- diff(pwcst.breaks)
+
+	# identifying first and last intervals for each individual
+	first_interval <- findInterval(t0,pwcst.breaks,rightmost.closed = TRUE)
+    last_interval <- findInterval(t1,pwcst.breaks,rightmost.closed = TRUE)
 	
-  tm <- 0.5*(t1-t0)
+	# initializing weights matrix
+	n <- dim(data.spec)[1]
+	
+	mat_weights <- matrix(max_interval,nrow=n,ncol=n.legendre,byrow=TRUE) 
+
+	
+	# we need to fill row by row but with row-dependant column indexing so we use column indexing
+	m0 <- cbind(1:n,first_interval)
+	m1 <- cbind(1:n,last_interval)
+
+	mat_weights[m0] <- max_interval[first_interval] - (t0 - pwcst.breaks[first_interval]) # column indexing !!!! https://stackoverflow.com/questions/71023484/r-data-table-dynamically-update-a-different-column-for-each-row	
+	mat_weights[m1] <- t1 - pwcst.breaks[last_interval] 
+
+	# filling with zeros for sub-intervals being before the first and after the last
+	col1 <- col(mat_weights)
+	mat_cond <- !(col1 > last_interval | col1 < first_interval)
+	
+	pwcst.weights <- mat_weights*mat_cond
+	
+	# finally, dealing with first intervals that are also last intervals
+	cond_first_equals_last <- last_interval==first_interval
+	pwcst.weights[m1][cond_first_equals_last] <- (t1-t0)[cond_first_equals_last]
+	
+  
+  
+  }else{
+  
+  
+    leg <- statmod::gauss.quad(n=n.legendre,kind="legendre")
+	tm <- 0.5*(t1-t0)
+	X.GL <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(t0+t1)/2,t1.name,data.spec,formula,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd))
+  
+    pwcst.breaks <- NULL
+    pwcst.weights <- NULL
+  
+  
+  }
+	
+  
 
   # list of n.legendre design matrices for numerical integration
-  X.GL <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(t0+t1)/2,t1.name,data.spec,formula,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd))
   
 
   return(list(cl=cl,type=type,n.legendre=n.legendre,t0=t0,t0.name=t0.name,t1=t1,t1.name=t1.name,tm=tm,event=event,event.name=event.name,expected=expected,expected.name=expected.name,
-  n=dim(X)[1],p=dim(X)[2],X.para=X.para,X.smooth=X.smooth,X=X,leg=leg,X.GL=X.GL,S=S,S.scale=S.scale,rank.S=rank.S,S.F=S.F,U.F=U.F,
+  n=dim(X)[1],p=dim(X)[2],X.para=X.para,X.smooth=X.smooth,X=X,is.pwcst=is.pwcst,pwcst.breaks=pwcst.breaks,pwcst.weights=pwcst.weights,leg=leg,X.GL=X.GL,S=S,S.scale=S.scale,rank.S=rank.S,S.F=S.F,U.F=U.F,
   S.smf=S.smf,S.tensor=S.tensor,S.tint=S.tint,S.rd=S.rd,smooth.name.smf=smooth.name.smf,smooth.name.tensor=smooth.name.tensor,smooth.name.tint=smooth.name.tint,smooth.name.rd=smooth.name.rd,
   S.pen=S.pen,S.list=S.list,S.F.list=S.F.list,lambda=lambda,df.para=df.para,df.smooth=df.smooth,df.tot=df.tot,
   list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd,nb.smooth=nb.smooth,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,beta.ini=beta.ini))
@@ -2003,6 +2153,7 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
 #'
 #' @param formula formula object identifying the model
 #' @param data.spec data frame that represents the environment from which the covariate values and knots are to be calculated
+#' @param t1.name name of the vector of follow-up times
 #' @param Z.smf List of matrices that represents the sum-to-zero constraint to apply for \code{\link{smf}} splines
 #' @param Z.tensor List of matrices that represents the sum-to-zero constraint to apply for \code{\link{tensor}} splines
 #' @param Z.tint List of matrices that represents the sum-to-zero constraint to apply for \code{\link{tint}} splines
@@ -2037,10 +2188,10 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
 #' Z.smf <- model.c$Z.smf ; list.smf <- model.c$list.smf
 #' 
 #' # Calculating the design matrix
-#' design.M <- design.matrix(form,data.spec=data,Z.smf=Z.smf,list.smf=list.smf,
+#' design.M <- design.matrix(form,data.spec=data,t1.name="time",Z.smf=Z.smf,list.smf=list.smf,
 #' Z.tensor=NULL,Z.tint=NULL,list.tensor=NULL,list.tint=NULL,list.rd=NULL)
 #'
-design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd){
+design.matrix <- function(formula,data.spec,t1.name,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd){
 
   formula <- stats::as.formula(formula)
 
@@ -2056,6 +2207,10 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
 	intercept <- ""
 
   }
+  
+   # indice of piecewise constant hazard term
+  ind.pwcst <- grep("^pwcst\\(", tmp)
+ 
 
   # indices of smooth terms
   ind.smf <- grep("^smf\\(", tmp)
@@ -2072,6 +2227,8 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
   Tint <- tmp[ind.tint]
   Rd <- tmp[ind.rd]
 
+  is.pwcst <- FALSE
+  
   smooth.smf <- FALSE
   smooth.tensor <- FALSE
   smooth.tint <- FALSE
@@ -2088,13 +2245,29 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
   if (length.Tint!=0) smooth.tint <- TRUE
   if (length.Rd!=0) smooth.rd <- TRUE
   
-  # fully parametric terms
-  if (smooth.smf | smooth.tensor | smooth.tint | smooth.rd){
-    Para <- tmp[-c(ind.smf,ind.tensor,ind.tint,ind.rd)]
+  
+  # if a piecewise constant hazard specification is present we need to add it to the parametric formula by using the cut function internally
+  if (length(ind.pwcst)!=0) {
+  
+	if (length(ind.pwcst)>1) stop("You cannot use several piecewise constant specification terms")
+  
+	is.pwcst <- TRUE
+	intercept <- "-1"
+	
+	pwcst.obj <- eval(parse(text=tmp[ind.pwcst]))
+	pwcst.formula <- paste0("cut(",t1.name,",breaks=c(",paste(pwcst.obj$pwcst.breaks,collapse=','),"),include.lowest=TRUE,right=TRUE)")
+	
+	tmp <- c(tmp,pwcst.formula)
+  }
+  
+  # full parametric terms
+  if (is.pwcst | smooth.smf | smooth.tensor | smooth.tint | smooth.rd){
+    Para <- tmp[-c(ind.pwcst,ind.smf,ind.tensor,ind.tint,ind.rd)]
   }else{
     Para <- tmp
   }
-
+  
+  
   # parametric formula
   if (length(Para)==0){
     formula.para <- stats::as.formula("~1")
@@ -2104,8 +2277,24 @@ design.matrix <- function(formula,data.spec,Z.smf,Z.tensor,Z.tint,list.smf,list.
 
   # parametric design matrix
   X.para <- stats::model.matrix(formula.para,data=data.spec)
-	
+   
   df.para <- NCOL(X.para)
+  
+  #--------------------- new colnames (change from 'cut(....)[interval]' to a more concise 'pwcst[interval]')
+  if(is.pwcst){ 
+  
+  colnames.para <- colnames(X.para)
+
+  # indexes of pwcst colnames in X.para
+  ind.colnames.pwcst <- grep(paste0("^cut\\(",t1.name), colnames.para)
+
+  # position of the last character to replace in colnames
+  last.replace <- instr(colnames.para[ind.colnames.pwcst],")",n=2)
+
+  # new colnames
+  colnames(X.para)[ind.colnames.pwcst] <- sapply(colnames.para[ind.colnames.pwcst], function(x) gsub(substr(x,start=1,stop=last.replace),"pwcst",x,fixed=TRUE))
+  }
+ 
 
   # Initialization of smooth matrices
   X.smf <- NULL
@@ -2450,7 +2639,7 @@ cor.var <- function(model){
 #' @param rho.ini vector of initial log smoothing parameters; default is NULL, in which case every initial log lambda will be -1
 #' @param max.it.beta maximum number of iterations to reach convergence in the regression parameters; default is 200
 #' @param max.it.rho maximum number of iterations to reach convergence in the smoothing parameters; default is 30
-#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables in which case all betas are set to zero)
+#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables or if there is a piecewise constant hazard specification in which cases all betas are set to zero)
 #' @param detail.rho if TRUE, details concerning the optimization process in the smoothing parameters are displayed; default is FALSE
 #' @param detail.beta if TRUE, details concerning the optimization process in the regression parameters are displayed; default is FALSE
 #' @param n.legendre number of Gauss-Legendre quadrature nodes to be used to compute the cumulative hazard; default is 20
@@ -2920,7 +3109,7 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 	# setting up the design and penalty matrices 
 	
 	build <- model.cons(formula,lambda,data,t1,t1.name,t0,t0.name,event,event.name,expected,expected.name,type,n.legendre,cl,beta.ini)
-	
+
 	#------------------------------------------
 	# optimization procedures. For given smoothing parameters we call survPen.fit. Otherwise we call NR.rho that
 	# will call survPen.fit for each trial of smoothing parameters in the Newton-Raphson algorithm.
@@ -2930,6 +3119,8 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 		if(nb.smooth!=0){ # Are there any penalized terms ?
 
+			if (build$is.pwcst) stop("Must not use piecewise constant hazard specification with penalized splines that need smoothing parameter estimation. Please use the cut function")
+  
 			if (is.null(rho.ini)) rho.ini <- rep(-1,nb.smooth) # initial values for log(lambda)
 		
 			if (length(rho.ini)!=nb.smooth){ 
@@ -2948,6 +3139,7 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 			X.ini <- param$X.ini
 			S.pen.ini <- param$S.pen.ini
 			beta.ini <- build$beta.ini
+			build$optim.rho <- 1 # so the model knows that we do need to calculate the derivatives of LCV or LAML
 			
 			# smoothing parameters are to be selected, optimization of LCV or LAML criterion
 			model <- NR.rho(build,rho.ini=rho.ini,data=data,formula=formula,max.it.beta=max.it.beta,max.it.rho=max.it.rho,beta.ini=beta.ini,
@@ -2969,9 +3161,10 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 		}else{
 
-			# only fully parametric terms in the model so no need for smoothing parameter selection
+			# only fully parametric terms in the model so no need for smoothing parameter estimation
 			build$lambda <- 0
-
+			build$optim.rho <- 0 # so the model knows that we do NOT need to calculate the derivatives of LCV or LAML
+			
 			model <- survPen.fit(build,data=data,formula=formula,max.it.beta=max.it.beta,beta.ini=beta.ini,detail.beta=detail.beta,method=method,tol.beta=tol.beta)
 
 			# factor levels for prediction
@@ -2992,7 +3185,8 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 		X.ini <- param$X.ini
 		S.pen.ini <- param$S.pen.ini
 		beta.ini <- build$beta.ini
-		
+		build$optim.rho <- 0 # so the model knows that we do NOT need to calculate the derivatives of LCV or LAML
+			
 		# smoothing parameters are given by the user so no need for smoothing parameter selection
 		model <- survPen.fit(build,data=data,formula=formula,max.it.beta=max.it.beta,beta.ini=beta.ini,detail.beta=detail.beta,method=method,tol.beta=tol.beta)
 
@@ -3030,7 +3224,7 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 #' @param data an optional data frame containing the variables in the model
 #' @param formula formula object specifying the model
 #' @param max.it.beta maximum number of iterations to reach convergence in the regression parameters; default is 200
-#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables in which case all betas are set to zero)
+#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables or if there is a piecewise constant hazard specification in which cases all betas are set to zero)
 #' @param detail.beta if TRUE, details concerning the optimization process in the regression parameters are displayed; default is FALSE
 #' @param method criterion used to select the smoothing parameters. Should be "LAML" or "LCV"; default is "LAML"
 #' @param tol.beta convergence tolerance for regression parameters; default is \code{1e-04}. See \code{\link{NR.beta}} for details
@@ -3121,6 +3315,12 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   Z.tensor <- build$Z.tensor
   Z.tint <- build$Z.tint
 
+  is.pwcst <- build$is.pwcst
+  if(is.null(build$optim.rho)) build$optim.rho <- 0
+  
+  pwcst.weights <- build$pwcst.weights
+  pwcst.breaks <- build$pwcst.breaks
+  
   leg <- build$leg
   n.legendre <- build$n.legendre
   X.GL <- build$X.GL
@@ -3131,14 +3331,16 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   # Initialization of beta.ini is very important
   # All betas except intercept will be initialized to zero
   # intercept will be initialized to log(sum(event)/sum(t1))
-  # (except if there are "by" variables in which case all betas are set to zero)
+  # (except if there are "by" variables or if there is a piecewise 
+  # constant hazard specification in which cases all betas are set to zero)
 
   if (is.null(beta.ini)) {beta.ini=c(log(sum(event)/sum(t1)),rep(0,df.para+df.smooth-1))}
 
-  # if there are "by" variables, we set all initial betas to zero
+  # if there are "by" variables or if there is a piecewise constant hazard specification, we set all initial betas to zero
   if (any(sapply(list.smf,`[`,"by")!="NULL") | 
 	any(sapply(list.tensor,`[`,"by")!="NULL") |
-	any(sapply(list.tint,`[`,"by")!="NULL") ){
+	any(sapply(list.tint,`[`,"by")!="NULL") | 
+	build$is.pwcst){
 
 	beta.ini=rep(0,df.para+df.smooth)
 
@@ -3162,9 +3364,16 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
   #-------------------------------------------------------------------
   # Gradient and Hessian at convergence
-
-  deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL[[i]]*tm*leg$weights[i])
-
+  if (is.pwcst){
+  
+	deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL[[i]]*pwcst.weights[,i])
+	
+  }else{
+  
+	deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL[[i]]*tm*leg$weights[i])
+	
+  }
+  
   deriv.2.list <- lapply(1:n.legendre, function(i) X.GL[[i]]%cross%(deriv.list[[i]]))
 
   f.first <- Reduce("+",deriv.list)
@@ -3281,8 +3490,8 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 	#------------------------------------------------------------------------
 	# derivatives of LCV and LAML with respect to the smoothing parameters
 	#------------------------------------------------------------------------
-
-	if (sum(lambda)>.Machine$double.eps) {
+	
+	if (build$optim.rho==1) {
 	
 		S.beta <- lapply(1:nb.smooth,function(i) S.list[[i]]%vec%beta)
 		
@@ -3469,7 +3678,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 	Hess.beta.modif=Hess.beta.modif,ll.unpen=ll.unpen,ll.pen=ll.pen,deriv.rho.beta=deriv.rho.beta,deriv.rho.inv.Hess.beta=deriv.rho.inv.Hess.beta,lambda=lambda,
 	nb.smooth=nb.smooth,iter.rho=iter.rho,optim.rho=optim.rho,method=method,criterion.val=criterion.val,LCV=LCV,LAML=LAML,grad.rho=grad.rho,Hess.rho=Hess.rho,inv.Hess.rho=inv.Hess.rho,
 	Hess.rho.modif=Hess.rho.modif,Ve=Ve,Vp=Vp,Vc=Vc,Vc.approx=Vc.approx,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,
-	list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd,U.F=U.F)
+	list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd,U.F=U.F,is.pwcst=is.pwcst,pwcst.breaks=pwcst.breaks)
 
 	class(res) <- "survPen"
 	res
@@ -3519,26 +3728,35 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 #' @examples
 #'
 #' library(survPen)
-#'
+
 #' data(datCancer) # simulated dataset with 2000 individuals diagnosed with cervical cancer
-#'
-#' # model : unidimensional penalized spline for time since diagnosis with 5 knots
-#' f1 <- ~smf(fu,df=5)
-#'
+#' 
+#' f1 <- ~tensor(fu,age,df=c(5,5))
+#' 
 #' # hazard model
 #' mod1 <- survPen(f1,data=datCancer,t1=fu,event=dead,expected=NULL,method="LAML")
-#'
-#' # predicting hazard and survival at time 1
-#' pred <- predict(mod1,data.frame(fu=1))
+#' 
+#' # predicting hazard and survival curves for age 60
+#' nt <- seq(0,5,le=50)
+#' pred <- predict(mod1,data.frame(fu=nt,age=60))
 #' pred$haz
 #' pred$surv
-#'
-#' # predicting hazard ratio between age 70 and age 30
-#' pred.HR <- predict(mod1,data.frame(fu=1,age=70),newdata.ref=data.frame(fu=1,age=30),type="HR")
-#' pred.HR$HR
-#' pred.HR$HR.inf
-#' pred.HR$HR.sup
-#'
+#' 
+#' # predicting hazard ratio at 1 year according to age (with reference age of 50)
+#' newdata1 <- data.frame(fu=1,age=seq(30,90,by=1))
+#' newdata.ref1 <- data.frame(fu=1,age=rep(50,times=61))
+#' predHR_1 <- predict(mod1,newdata=newdata1,newdata.ref=newdata.ref1,type="HR")
+#' predHR_1$HR
+#' predHR_1$HR.inf
+#' predHR_1$HR.sup
+#' 
+#' # predicting hazard ratio at 3 years according to age (with reference age of 50)
+#' newdata3 <- data.frame(fu=3,age=seq(30,90,by=1))
+#' newdata.ref3 <- data.frame(fu=3,age=rep(50,times=61))
+#' predHR_3 <- predict(mod1,newdata=newdata3,newdata.ref=newdata.ref3,type="HR")
+#' predHR_3$HR
+#' predHR_3$HR.inf
+#' predHR_3$HR.sup
 predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.int=0.95,do.surv=TRUE,type="standard",exclude.random=FALSE,get.deriv.H=FALSE,...){
 
 	if (!inherits(object,"survPen")) stop("object is not of class survPen")
@@ -3562,7 +3780,7 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 
 	tm <- (t1-t0)/2
 
-	myMat <- design.matrix(object$formula,data.spec=newdata,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
+	myMat <- design.matrix(object$formula,data.spec=newdata,t1.name=object$t1.name,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
 
 	if (type=="lpmatrix") return(myMat)
 	
@@ -3588,7 +3806,7 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 	
 	if (type=="HR"){
 	
-		myMat.ref <- design.matrix(object$formula,data.spec=newdata.ref,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
+		myMat.ref <- design.matrix(object$formula,data.spec=newdata.ref,t1.name=object$t1.name,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
 
 		X <- myMat - myMat.ref
 		
@@ -3631,15 +3849,69 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 
 			data.t <- data
 			data.t[,object$t1.name] <- t1
-			design.matrix(object$formula,data.spec=data.t,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
+			design.matrix(object$formula,data.spec=data.t,t1.name=object$t1.name,Z.smf=object$Z.smf,Z.tensor=object$Z.tensor,Z.tint=object$Z.tint,list.smf=object$list.smf,list.tensor=object$list.tensor,list.tint=object$list.tint,list.rd=object$list.rd)
 
 		}
 
-		X.GL <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(t0+t1)/2,newdata,object))
+		if (object$is.pwcst){
+		
+			pwcst.breaks <- object$pwcst.breaks
+			
+			# n.legendre needs to correspond to the number of sub-intervals
+			n.legendre <- length(pwcst.breaks) - 1
+			
+			# if is.pwcst is TRUE, n.legendre actually corresponds to the number of sub-intervals
+			pwcst.nodes <- pwcst.breaks[2:(n.legendre+1)]
+			
+			#-------------------- weights calculation, we need to calculate the contribution of each individual (depending on t0 and t1) on each sub-interval (defined by pwcst.breaks)
 
-		cumul.haz <- lapply(1:n.legendre, function(i) (exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
+			# maximum contribution on each interval
+			max_interval <- diff(pwcst.breaks)
 
-		cumul.haz <- tm*Reduce("+",cumul.haz)
+			# identifying first and last intervals for each individual
+			first_interval <- findInterval(t0,pwcst.breaks,rightmost.closed = TRUE)
+			last_interval <- findInterval(t1,pwcst.breaks,rightmost.closed = TRUE)
+			
+			# initializing weights matrix
+			n <- dim(newdata)[1]
+			
+			mat_weights <- matrix(max_interval,nrow=n,ncol=n.legendre,byrow=TRUE) 
+
+			# we need to fill row by row but with row-dependant column indexing so we use column indexing
+			m0 <- cbind(1:n,first_interval)
+			m1 <- cbind(1:n,last_interval)
+
+			mat_weights[m0] <- max_interval[first_interval] - (t0 - pwcst.breaks[first_interval]) # column indexing !!!! https://stackoverflow.com/questions/71023484/r-data-table-dynamically-update-a-different-column-for-each-row	
+			mat_weights[m1] <- t1 - pwcst.breaks[last_interval] 
+
+			# filling with zeros for sub-intervals being before the first and after the last
+			col1 <- col(mat_weights)
+			mat_cond <- !(col1 > last_interval | col1 < first_interval)
+			
+			pwcst.weights <- mat_weights*mat_cond
+			
+			# finally, dealing with first intervals that are also last intervals
+			cond_first_equals_last <- last_interval==first_interval
+			pwcst.weights[m1][cond_first_equals_last] <- (t1-t0)[cond_first_equals_last]
+			
+			X.GL <- lapply(1:n.legendre, function(i) X.func(pwcst.nodes[i],newdata,object))
+
+			cumul.haz <- lapply(1:n.legendre, function(i) (exp((X.GL[[i]]%vec%beta)))*pwcst.weights[,i])
+
+			cumul.haz <- Reduce("+",cumul.haz)
+
+		}else{
+		
+			X.GL <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(t0+t1)/2,newdata,object))
+
+			cumul.haz <- lapply(1:n.legendre, function(i) (exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
+			
+			cumul.haz <- tm*Reduce("+",cumul.haz)
+		
+		}
+		
+		
+		
 
 		surv=exp(-cumul.haz)
 
@@ -3660,10 +3932,19 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 			# if any cumul hazard is zero, we put it at a very low positive value
 			cumul.haz[cumul.haz==0] <- 1e-16
 
-			deriv.cumul.haz <- lapply(1:n.legendre, function(i) X.GL[[i]]*(exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
-
-			deriv.cumul.haz <- tm*Reduce("+",deriv.cumul.haz)
-
+			if (object$is.pwcst){
+			
+				deriv.cumul.haz <- lapply(1:n.legendre, function(i) X.GL[[i]]*(exp((X.GL[[i]]%vec%beta)))*pwcst.weights[,i])
+				deriv.cumul.haz <- Reduce("+",deriv.cumul.haz)
+				
+			}else{
+			
+				deriv.cumul.haz <- lapply(1:n.legendre, function(i) X.GL[[i]]*(exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
+				deriv.cumul.haz <- tm*Reduce("+",deriv.cumul.haz)
+				
+			}
+			
+	
 			log.cumul.haz <- log(cumul.haz)
 
 			deriv.log.cumul.haz <- deriv.cumul.haz/cumul.haz
@@ -3970,7 +4251,7 @@ print.summary.survPen <- function(x, digits = max(3, getOption("digits") - 2),
 #' convergence : first the hessian is perturbed whenever it is not positive definite and second, at each step, if the penalized
 #' log-likelihood is not maximized, the step is halved until it is.
 #' @param build list of objects returned by \code{\link{model.cons}}
-#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables in which case all betas are set to zero)
+#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables or if there is a piecewise constant hazard specification in which cases all betas are set to zero)
 #' @param detail.beta if TRUE, details concerning the optimization process in the regression parameters are displayed; default is FALSE
 #' @param max.it.beta maximum number of iterations to reach convergence in the regression parameters; default is 200
 #' @param tol.beta convergence tolerance for regression parameters; default is \code{1e-04}
@@ -4016,7 +4297,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	# get all the build elements
 	type <- build$type # net or overall 
 	X <- build$X # design matrix
-
+	
 	X.GL <- build$X.GL # list of Gauss-Legendre design matrices
 	
 	event <- build$event # censoring indicators
@@ -4029,6 +4310,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	tm <- build$tm # mean of t0 and t1
 	S <- build$S # final penalty matrix
 	p <- build$p # number of regression parameters
+	
+	is.pwcst <- build$is.pwcst
+	pwcst.weights <- build$pwcst.weights
 
 	k=1
 	ll.pen=100
@@ -4071,8 +4355,16 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		# first derivatives of the cumulative hazard
 		haz.GL.old <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%betaold))
 		
-		deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL.old[[i]]*leg$weights[i]*tm)
+		if (is.pwcst){
+		
+			deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL.old[[i]]*pwcst.weights[,i])
+		
+		}else{
+		
+			deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL.old[[i]]*leg$weights[i]*tm)
 
+		}
+		
 		f.first <- Reduce("+",deriv.list)
 		
 		# log-likelihoods gradients
@@ -4081,7 +4373,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		}else{
 			grad.unpen.beta <- colSums2(-f.first + event*X)
 		}
-
+		
 		grad <- grad.unpen.beta-S%vec%betaold
 		
 		# second derivatives of the cumulative hazard
@@ -4132,10 +4424,18 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 
 		# cumulative hazard
-		integral <- lapply(1:n.legendre, function(i) haz.GL.old[[i]]*leg$weights[i])
+		if (is.pwcst){
+		
+			integral <- lapply(1:n.legendre, function(i) haz.GL.old[[i]]*pwcst.weights[,i])
+			integral <- Reduce("+",integral)
+		
+		}else{
+		
+			integral <- lapply(1:n.legendre, function(i) haz.GL.old[[i]]*leg$weights[i])
+			integral <- tm*Reduce("+",integral)
 
-		integral <- tm*Reduce("+",integral)
-
+		}
+		
 		# log-likelihoods
 		if (type=="net"){
 			ll.unpenold <- sum(-integral + event*log(ftold+expected))
@@ -4151,7 +4451,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		pas <- Vp%vec%grad
 		
 		beta1 <- betaold+pas
-
+		
 		# New hazard
 		pred1 <- X%vec%beta1
 		ft1=exp(pred1)
@@ -4160,9 +4460,18 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		# haz.GL will serve in survPen.fit to derive the derivatives with respect to the smoothing parameters
 		haz.GL <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%beta1))
 
-		integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
-	
-		integral <- tm*Reduce("+",integral)
+		if (is.pwcst){
+		
+			integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*pwcst.weights[,i])
+			integral <- Reduce("+",integral)
+		
+		}else{
+		
+			integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
+			integral <- tm*Reduce("+",integral)
+			
+		}
+		
 		
 		# New log-likelihoods
 		if (type=="net"){
@@ -4174,6 +4483,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		ll.pen <- ll.unpen - 0.5*sum(beta1*(S%vec%beta1))
 
 		if (is.nan(ll.pen)) {ll.pen <- ll.pen.old - 1}
+		
 		
 		if (ll.pen < ll.pen.old - 1e-03){ # at each step, the current log-likelihood should not be inferior to
 		# the previous one with a certain tolerence (1e-03)
@@ -4196,10 +4506,18 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 				# New cumulative hazard
 				haz.GL <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%beta1))
 
-				integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
-
-				integral <- tm*Reduce("+",integral)
-
+				if (is.pwcst){
+		
+					integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*pwcst.weights[,i])
+					integral <- Reduce("+",integral)
+		
+				}else{
+		
+					integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
+					integral <- tm*Reduce("+",integral)
+					
+				}
+		
 				# New log-likelihoods
 				if (type=="net"){
 					ll.unpen <- sum(-integral + event*log(ft1+expected))
@@ -4229,7 +4547,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 		# next iteration
 		k=k+1
-
+		
 	}
 
 	if (detail.beta) {
@@ -4264,7 +4582,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 #' @param formula formula object specifying the model
 #' @param max.it.beta maximum number of iterations to reach convergence in the regression parameters; default is 200
 #' @param max.it.rho maximum number of iterations to reach convergence in the smoothing parameters; default is 30
-#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables in which case all betas are set to zero)
+#' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables or if there is a piecewise constant hazard specification in which cases all betas are set to zero)
 #' @param detail.rho if TRUE, details concerning the optimization process in the smoothing parameters are displayed; default is FALSE
 #' @param detail.beta if TRUE, details concerning the optimization process in the regression parameters are displayed; default is FALSE
 #' @param nb.smooth number of smoothing parameters
@@ -4302,7 +4620,9 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 #'  
 #' # Estimating the smoothing parameter and the regression parameters
 #' # we need to apply a reparameterization to model.c before fitting
-#' Newton2 <- NR.rho(repam(model.c)$build,rho.ini=-1,data,form,nb.smooth=1,detail.rho=TRUE)
+#' constructor <- repam(model.c)$build # model constructor
+#' constructor$optim.rho <- 1 # we tell it we want to estimate the log smoothing parameters (rho)
+#' Newton2 <- NR.rho(constructor,rho.ini=-1,data,form,nb.smooth=1,detail.rho=TRUE)
 #'
 NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta.ini=NULL,detail.rho=FALSE,detail.beta=FALSE,nb.smooth,tol.beta=1e-04,tol.rho=1e-04,step.max=5,method="LAML"){
 
