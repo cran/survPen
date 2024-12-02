@@ -1,5 +1,6 @@
 #--------------------------------------------------------------------------------------------------------------------------
-# Penalized (excess) hazard model for time-to-event data
+# Penalized smooth models for (excess) hazard and relative mortality ratio in classical time-to-event setting
+# Penlized marginal intensity model for recurrent event data
 #--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -37,6 +38,87 @@ NULL
 #----------------------------------------------------------------------------------------------------------------
 
 
+
+#----------------------------------------------------------------------------------------------------------------
+# list.wicss : List of ICSS standards for age-standardization of cancer (net) survival 
+#----------------------------------------------------------------------------------------------------------------
+
+#' List of ICSS standards for age-standardization of cancer (net) survival 
+#'
+#' Four data frames are available in the list : 1, 2, 3 and "prostate". Each one corresponds to certain types of cancer.
+#' Details can be found in Corazzieri et al. (2004) (10.1016/j.ejca.2004.07.002)  or at (in French) : https://www.santepubliquefrance.fr/docs/survie-des-personnes-atteintes-de-cancer-en-france-metropolitaine-1989-2018-materiel-et-methodes
+#' For each data frame, the variables are as follows:
+#' \itemize{
+#'   \item AgeClass. Age classes considered. Closed on the left and open on the right.
+#'   \item AgeWeights. Weights associated with each age class
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name list.wicss
+#' @usage data(list.wicss)
+#' @format A list containing four data frames of 5 rows and 2 variables each
+NULL
+
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : list.wicss
+#----------------------------------------------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------------------------------------------
+# expected.table : French women mortality table to serve as example of reference/expected mortality in excess hazard and relative mortality ratio models
+#----------------------------------------------------------------------------------------------------------------
+
+#' French women mortality table
+#'
+#' French women mortality table to serve as example of reference/expected mortality in excess hazard and relative mortality ratio models
+#' The data come from the human mortality databse website: https://www.mortality.org/Country/Country?cntr=FRATNP
+#' \itemize{
+#'   \item Age. Age group for 1-year interval from exact age x to just before exact age x+1 (0-110+)
+#'   \item Year. Calendar Year (1816-2021)
+#'   \item mx. Central death rate between ages x and x+1
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name expected.table
+#' @usage data(expected.table)
+#' @format A data frame with 22866 rows and 3 variables
+NULL
+
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : expected.table
+#----------------------------------------------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------------------------------------------
+# HeartFailure : simulated recurrent event dataset
+#----------------------------------------------------------------------------------------------------------------
+
+#' Patients with heart failure at risk of recurrent hospitalization events
+#'
+#' A simulated dataset containing 3 068 observations (2 268 events) in 800 patients with heart failure. 
+#' The dataset is based on hfaction_cpx12 dataset from package WA. The variables are as follows:
+#' \itemize{
+#'   \item id. patient identifcation number
+#'   \item treatment. treatment=0 for control and treatment=1 for exercise training
+#'   \item t0. beginning of follow-up for a given event
+#'   \item t1. end of follow-up for a given event (up to 3.27 years)
+#'   \item enum. event identification number for a given patient (between 1 and 6 events per patient)
+#'   \item event. event indicator (1 for hospitalization, 0 for censored)
+#' }
+#' @docType data
+#' @keywords datasets
+#' @name HeartFailure
+#' @usage data(HeartFailure)
+#' @format A data frame with 3 068 rows and 6 variables
+NULL
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : HeartFailure
+#----------------------------------------------------------------------------------------------------------------
+
+
 #----------------------------------------------------------------------------------------------------------------
 # survPenObject : description of the object returned by function survPen
 #----------------------------------------------------------------------------------------------------------------
@@ -55,7 +137,7 @@ NULL
 #' \item{expected.name}{name of the vector of expected hazard}
 #' \item{haz}{fitted hazard}
 #' \item{coefficients}{estimated regression parameters. Unpenalized parameters are first, followed by the penalized ones}
-#' \item{type}{"net" for net survival estimation with penalized excess hazard model or "overall" for overall survival with penalized hazard model}
+#' \item{type}{"net" for net survival estimation with penalized excess hazard model, "overall" for overall survival with penalized hazard model, or "mult" for penalized relative mortality ratio model}
 #' \item{df.para}{degrees of freedom associated with fully parametric terms (unpenalized)}
 #' \item{df.smooth}{degrees of freedom associated with penalized terms}
 #' \item{p}{number of regression parameters}
@@ -102,6 +184,7 @@ NULL
 #' \item{inv.Hess.rho}{inverse of \code{Hess.rho}}
 #' \item{Hess.rho.modif}{if TRUE, the hessian of LCV or LAML has been perturbed at convergence}
 #' \item{Ve}{Frequentist covariance matrix}
+#' \item{Vr}{Robust frequentist covariance matrix accounting for correlated survival times}
 #' \item{Vp}{Bayesian covariance matrix}
 #' \item{Vc}{Bayesian covariance matrix corrected for smoothing parameter uncertainty (see Wood et al. 2016)}
 #' \item{Vc.approx}{Kass and Steffey approximation of \code{Vc} (see Wood et al. 2016)}
@@ -1479,7 +1562,7 @@ instr <- function(str1,str2,startpos=1,n=1){
 #' @param beta.ini initial set of regression parameters
 #' @return List of objects with the following items:
 #' \item{cl}{original \code{survPen} call}
-#' \item{type}{"net" or "overall"}
+#' \item{type}{"net", "overall", or "mult"}
 #' \item{n.legendre}{number of nodes for Gauss-Legendre quadrature. If is.pwcst is TRUE, for simplicity of implementation, n.legendre actually corresponds to the number of sub-intervals}
 #' \item{n}{number of individuals}
 #' \item{p}{number of parameters}
@@ -1540,7 +1623,7 @@ instr <- function(str1,str2,startpos=1,n=1){
 #' # The following code sets up everything we need in order to fit the model
 #' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
 #' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
-#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' expected=rep(0,100),expected.name=NULL,type="overall",n.legendre=20,
 #' cl="survPen(form,data,t1=time,event=event)",beta.ini=NULL)
 #'
 model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,event.name,expected,expected.name,type,n.legendre,cl,beta.ini){
@@ -2065,8 +2148,8 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
   if (is.pwcst){ # if there is a piecewise constant hazard we do not use Gauss-Legendre but an explicit integral calculation
   
   
-	leg <- NULL
-	tm <- NULL
+	leg <- list(weights=0) #we need numeric values for the C++ function. Null not allowed
+	tm <- 0 #we need numeric values for the C++ function. Null not allowed
   
 	pwcst.breaks <- pwcst.obj$pwcst.breaks
 	pwcst.nodes <- pwcst.breaks[2:length(pwcst.breaks)]
@@ -2181,7 +2264,7 @@ model.cons <- function(formula,lambda,data.spec,t1,t1.name,t0,t0.name,event,even
 #' # Setting up the model
 #' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
 #' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
-#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' expected=rep(0,100),expected.name=NULL,type="overall",n.legendre=20,
 #' cl="survPen(form,data,t1=time,event=event)",beta.ini=NULL)
 #'  
 #' # Retrieving the sum-to-zero constraint matrices and the list of knots
@@ -2423,7 +2506,7 @@ design.matrix <- function(formula,data.spec,t1.name,Z.smf,Z.tensor,Z.tint,list.s
 #' # Setting up the model before fitting
 #' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
 #' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
-#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' expected=rep(0,100),expected.name=NULL,type="overall",n.legendre=20,
 #' cl="survPen(form,data,t1=time,event=event)",beta.ini=NULL)
 #'  
 #' # Reparameterization allows separating the parameters into unpenalized and 
@@ -2610,8 +2693,97 @@ cor.var <- function(model){
 # END of code : cor.var
 #----------------------------------------------------------------------------------------------------------------
 
+
+#----------------------------------------------------------------------------------------------------------------
+# robust.var : implementation of robust variance
+#----------------------------------------------------------------------------------------------------------------
+
+#' Implementation of the robust variance Vr
+#'
+#' Takes the model at convergence and calculates the robust variance matrix accounting for correlated survival times
+#'
+#' @param model survPen object, see \code{\link{survPen.fit}} for details
+#' @param data original dataset
+#' @param cluster.name name of cluster variable in data
+#' @param n.legendre number of nodes for Gauss-Legendre quadrature; default is 50
+#' @return survPen object with robust variance Vr
+#'
+robust.var <- function(model, data, cluster.name, n.legendre = 50){
+
+  cluster <- data[,cluster.name]
+  uniclust <- unique(cluster) # unique values of clusters
+  n_clust <- length(uniclust) # number of clusters
+
+  t1.name <- model$t1.name
+  t1 <- data[,t1.name]
+  
+  t0.name <- model$t0.name
+  t0 <- data[,t0.name]
+  
+  event.name <- model$event.name
+  event <- data[,event.name]
+  
+  #____________________________________________________
+  # first term of the score function (sum(Xi(ti)))
+  Xti <- model$X
+  Xti[event == 0,] <- 0
+  Xti <- do.call(rbind, by(Xti, cluster, colSums))
+    
+  #____________________________________________________
+  # second term of the score function (int X(t) exp(X(t)beta))
+  
+  
+  begin <- sapply(1:n_clust, function(i) min(t0[cluster == uniclust[i]])) # for left-truncated data (only zeroes otherwise)
+  
+  tau <- sapply(1:n_clust, function(i) max(t1[cluster == uniclust[i]])) # time to the subjects' end of follow-up
+  
+ 
+  X.func <- function(t1,t1.name,data,formula,Z.smf,Z.tensor,Z.tint,list.smf,list.tensor,list.tint,list.rd){
+
+    data.t <- data
+    data.t[,t1.name] <- t1
+    design.matrix(formula,data.spec=data.t,t1.name=t1.name,Z.smf=Z.smf,Z.tensor=Z.tensor,Z.tint=Z.tint,list.smf=list.smf,list.tensor=list.tensor,list.tint=list.tint,list.rd=list.rd)
+
+  }
+
+  leg <- statmod::gauss.quad(n=n.legendre,kind="legendre")
+  tm <- 0.5*(tau-begin) 
+  
+  # we keep only one observation for each cluster and drop observed times
+  dataGL <- data[match(uniclust, cluster),-which(names(data) %in% c(t1.name, t0.name))]
+ 
+  # For each cluster we integrate between begin (zero or late-entry time) and tau (max observed time)
+  X.GL <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(begin+tau)/2,t1.name,dataGL,model$formula,model$Z.smf,model$Z.tensor,model$Z.tint,
+  model$list.smf,model$list.tensor,model$list.tint,model$list.rd))
+  
+  integrale <- lapply(1:n.legendre, function(i) X.GL[[i]] * as.numeric(exp(X.GL[[i]]%vec%model$coefficients)*tm*leg$weights[i]))
+  
+
+  #______________________________________________________
+  # deriving robust variance
+  
+  V <- Xti - Reduce("+",integrale)
+  
+  invA <- n_clust*model$Vp
+  Sigma <- V%cross%V/ n_clust
+  
+  model$Vr <- 1/n_clust *invA %mult% Sigma %mult% invA
+  
+  rownames(model$Vr) <- colnames(model$Vr) <- rownames(model$Vp)
+  
+  return(model)
+  
+  }
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : robust.var
+#----------------------------------------------------------------------------------------------------------------
+
+
+
 #----------------------------------------------------------------------------------------------------------------
 # survPen : fits a multidimensionnal penalized survival model on the logarithm of the (excess) hazard
+# It may also fit a penalized model of the relative mortality ratio thanks to option type="mult"
 # This function estimates automatically the smoohting parameters via NR.rho and calls survPen.fit for
 # estimation of the betas
 #----------------------------------------------------------------------------------------------------------------
@@ -2642,11 +2814,13 @@ cor.var <- function(model){
 #' @param beta.ini vector of initial regression parameters; default is NULL, in which case the first beta will be \code{log(sum(event)/sum(t1))} and the others will be zero (except if there are "by" variables or if there is a piecewise constant hazard specification in which cases all betas are set to zero)
 #' @param detail.rho if TRUE, details concerning the optimization process in the smoothing parameters are displayed; default is FALSE
 #' @param detail.beta if TRUE, details concerning the optimization process in the regression parameters are displayed; default is FALSE
-#' @param n.legendre number of Gauss-Legendre quadrature nodes to be used to compute the cumulative hazard; default is 20
+#' @param n.legendre number of Gauss-Legendre quadrature nodes to be used to compute the cumulative hazard; default is NULL. If not supplied the value is set to 20 for (excess) hazard models and 10 for relative mortality ratio models
 #' @param method criterion used to select the smoothing parameters. Should be "LAML" or "LCV"; default is "LAML"
 #' @param tol.beta convergence tolerance for regression parameters; default is \code{1e-04}. See \code{\link{NR.beta}} for details
 #' @param tol.rho convergence tolerance for smoothing parameters; default is \code{1e-04}. See \code{\link{NR.rho}} for details
 #' @param step.max maximum absolute value possible for any component of the step vector (on the log smoothing parameter scale) in LCV or LAML optimization; default is 5. If necessary, consider lowering this value to achieve convergence
+#' @param type should be either 'overall' for hazard regression, 'net' for excess hazard regression, or 'mult' for relative mortality ratio regression
+#' @param cluster cluster variable for marginal hazard (intensity) models
 #' @return Object of class "survPen" (see \code{\link{survPenObject}} for details)
 #' @export
 #'
@@ -2680,7 +2854,7 @@ cor.var <- function(model){
 #' for each factor level. The main interest of by variables over separated models is the \code{same.rho} argument (for \code{\link{smf}}, \code{\link{tensor}} and \code{\link{tint}}) which allows forcing all smooths to have the same smoothing parameter(s). 
 #' Ordered \code{by} variables are handled in the same way, except that no smooth is generated for the first level of the ordered factor. This is useful if you are interested in differences from a reference level.
 #'
-#' See the survival_analysis_with_survPen vignette for more details. 
+#' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details. 
 #' 
 #' @section Random effects:
 #' i.i.d random effects can be specified using penalization. Indeed, the ridge penalty is equivalent to an assumption that the regression parameters are i.i.d. normal random effects.
@@ -2688,7 +2862,8 @@ cor.var <- function(model){
 #' The associated regression parameters are assumed i.i.d. normal, with unknown variance (to be estimated). This assumption is equivalent to an identity penalty matrix (i.e. a ridge penalty) on the regression parameters.
 #' The unknown smoothing parameter \eqn{\lambda} associated with the term \code{rd(clust)} is directly linked to the unknown variance \eqn{\sigma^2}: \eqn{\sigma^2 = \frac{1}{\lambda * S.scale}}.
 #' Then, the estimated log standard deviation is: \eqn{log(\hat{\sigma})=-0.5*log(\hat{\lambda})-0.5*log(S.scale)}. And the estimated variance of the log standard deviation is: \eqn{Var[log(\hat{\sigma})]=0.25*Var[log(\hat{\lambda})]=0.25*inv.Hess.rho}.
-#' See the survival_analysis_with_survPen vignette for more details.
+#' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details.
+#' 
 #' This approach allows implementing commonly used random effect structures. For example if \code{g} is a factor then \code{rd(g)} produces a random parameter for each level of \code{g}, the random parameters being i.i.d. normal. 
 #' If \code{g} is a factor and \code{x} is numeric, then \code{rd(g,x)} produces an i.i.d. normal random slope relating the response to \code{x} for each level of \code{g}.
 #' Thus, random effects treated as penalized splines allow specifying frailty (excess) hazard models (Charvat et al. 2016). For each individual i from cluster (usually geographical unit)  j, a possible model would be:
@@ -2697,7 +2872,7 @@ cor.var <- function(model){
 #' where \code{w_j} follows a normal distribution with mean 0. The random effect associated with the cluster variable is specified with the model term \code{rd(cluster)}. We could also specify a random effect depending on age for example with the model term \code{rd(cluster,age)}.
 #' \code{u_j = exp(w_j)} is known as the shared frailty.
 #'
-#' See the survival_analysis_with_survPen vignette for more details.
+#' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details.
 #'
 #' @section Excess hazard model:
 #' When studying the survival of patients who suffer from a common pathology we may be interested in the concept of excess mortality that represents the mortality due to that pathology. 
@@ -2713,6 +2888,68 @@ cor.var <- function(model){
 #' Thus, for \eqn{m} covariates \eqn{(x_1,\ldots,x_m)}, if we note \eqn{h_E(t,x_1,\ldots,x_m)} the excess hazard at time \eqn{t}, the excess hazard model is the following:
 #' \deqn{log[h_E(t,x_1,\ldots,x_m)]=\sum_j g_j(t,x_1,\ldots,x_m)}
 #'
+#' @section Relative mortality ratio model:
+#' Another important feature of the \code{survPen} package is that it allows fitting penalized relative mortality 
+#' ratio models.
+#' 
+#' As we discussed above, the excess mortality setting considers that the mortality (all causes) observed in 
+#' the patients (\eqn{h_O}) is actually decomposed as the sum of the expected 
+#' mortality \eqn{h_P} and the excess mortality due to the pathology (\eqn{h_E}). 
+#' 
+#' This may be written as:
+#' \deqn{h_O(t,x)=h_E(t,x)+h_P(a+t,z)}
+#' 
+#' One limitation of such a decomposition is that \eqn{h_E} is considered positive. Indeed, sometimes this assumption
+#' is not met. For example, in prostate cancer patients with low stages at diagnosis, we observe an 'undermortality'
+#' due to selection effects and better overall medical care. In that case, the excess mortality is actually neagtive
+#' and the net survival setting fails to describe the reality of those patients.
+#' Besides, the excess mortality setting considers the studied disease as an independent cause of death
+#' (conditionally on the covariates) compared to the other causes. This point of view is not usely considered
+#' in multiple sclerosis epidemiology for example, where the disease is seen as a comorbidity impacting all pre-
+#' existing causes of death. In that case, the observed hazard is decomposed as product of population hazard and
+#' a relative mortality ratio \eqn{r}
+#' 
+#' This may be written as:
+#' \deqn{h_O(t,x)=r(t,x)*h_P(a+t,z)}
+#' 
+#' This decomposition was first proposed in a modelling framework by Andersen et al. (1985). However Andersen's model
+#' was a non-flexible semi-parametric model.
+#' 
+#' The \code{survPen} package allows modelling the relative mortality ratio \eqn{r} as a multidimensional function of time and
+#' covariates. For \eqn{m} covariates \eqn{(x_1,\ldots,x_m)}, if we note \eqn{r(t,x_1,\ldots,x_m)} the relative mortality ratio 
+#' at time \eqn{t}, the model is as follows:
+#' \deqn{log[r(t,x_1,\ldots,x_m)]=\sum_j g_j(t,x_1,\ldots,x_m) }
+#' 
+#' Where the \eqn{g_j} functions may be penalized unidimensional or penalized tensor product splines. All features
+#' described for the (excess) hazard setting still apply when fitting a relative mortality ratio model.
+#' One difference lies in the predictions. With a fitted relative mortality ratio model, you can only
+#' retrieve the relative mortality ratio and cumulative relative mortality ratio predictions (with CIs), as well as 
+#' the ratios of realtive mortality ratio (with type='HR'). 
+#' No survival prediction (let alone survival difference) will be directly available because its calculation depends on 
+#' expected mortality rates.
+#' 
+#' Finally, one important difference between an excess hazard model and relative mortality ratio model is data preparation.
+#' For an excess hazard model we only need individual data with expected mortality rate at the time of death. Whereas in a
+#' relative mortality ratio model, the contribution to an individual to the likelihood requires all possible expected mortality rate
+#' values during the entire follow-up.
+#' Therefore, since the expected mortality rates come from national mortality tables usually available in 1-year intervals, we need to split the
+#' original dataset as many times as there are 1-year intervals during each individual's follow-up. The function \code{\link{splitmult}} will help you
+#' getting the splitdataset from the original one.
+#'
+#' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details and an example of analysis.
+#'
+#'
+#' @section Marginal hazard (intensity) models with robust standard errors:
+#'
+#' In presence of correlated time-to-event data (for example recurrent event data), robust standard errors accounting for said correlation need to be derived.
+#' The `survPen` package allows deriving such robust standard errors based on sandwich estimators (often called Huber sandwich estimator, see also Coz et al. submitted to Biostatistics, 
+#' for an example in the recurrent event setting).
+#'
+#' The user only needs to specify the `cluster` variable defining the statistical units for which repeated observations are available.
+#' This specification is performed via the `cluster` argument.
+#'
+#' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details and an example of analysis.
+#'
 #' @section Convergence:
 #' No convergence indicator is given. If the function returns an object of class \code{survPen}, it means that the algorithm has converged. If convergence issues occur, an error message is displayed.
 #' If convergence issues occur, do not refrain to use detail.rho and/or detail.beta to see exactly what is going on in the optimization process. To achieve convergence, consider lowering step.max and/or changing rho.ini and beta.ini.
@@ -2722,7 +2959,9 @@ cor.var <- function(model){
 #' Be aware that all character variables are transformed to factors before fitting.
 #'
 #' @references
+#' Andersen, P. K., Borch-Johnsen, K., Deckert, T., Green, A., Hougaard, P., Keiding, N., and Kreiner, S. (1985). A Cox regression model for the relative mortality and its application to diabetes mellitus survival data. Biometrics, 921-932. \cr \cr
 #' Charvat, H., Remontet, L., Bossard, N., Roche, L., Dejardin, O., Rachet, B., ... and Belot, A. (2016), A multilevel excess hazard model to estimate net survival on hierarchical data allowing for non linear and non proportional effects of covariates. Statistics in medicine, 35(18), 3066-3084. \cr \cr
+#' Coz, E., Charvat, H., Maucort-Boulch, D., and Fauvernier, M. (submitted to Biostatistics). Flexible penalized marginal intensity models for recurrent event data. 
 #' Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N., Remontet, L. and the CENSUR Working Survival Group. Multidimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, in revision in the Journal of the Royal Statistical Society, series C. \cr \cr
 #' O Sullivan, F. (1988), Fast computation of fully automated log-density and log-hazard estimators. SIAM Journal on scientific and statistical computing, 9(2), 363-379. \cr \cr
 #' Remontet, L., Bossard, N., Belot, A., & Esteve, J. (2007), An overall strategy based on regression models to estimate relative survival and model the effects of prognostic factors in cancer survival studies. Statistics in medicine, 26(10), 2214-2228. \cr \cr
@@ -2777,10 +3016,8 @@ cor.var <- function(model){
 #' mod.cst <- survPen(f.cst,data=datCancer,t1=fu,event=dead)
 #'
 #' # piecewise constant hazard model
-#' f.pwcst <- ~cut(fu,breaks=seq(0,5,by=0.5),include.lowest=TRUE)
-#' mod.pwcst <- survPen(f.pwcst,data=datCancer,t1=fu,event=dead,n.legendre=200)
-#' # we increase the number of points for Gauss-Legendre quadrature to make sure that the cumulative
-#' # hazard is properly approximated
+#' f.pwcst <- ~pwcst(breaks=seq(0,5,by=0.5))
+#' mod.pwcst <- survPen(f.pwcst,data=datCancer,t1=fu,event=dead)
 #'
 #' # linear effect of time
 #' f.lin <- ~fu
@@ -3024,7 +3261,7 @@ cor.var <- function(model){
 #'
 #' }
 #' 
-survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.ini=NULL,max.it.beta=200,max.it.rho=30,beta.ini=NULL,detail.rho=FALSE,detail.beta=FALSE,n.legendre=20,method="LAML",tol.beta=1e-04,tol.rho=1e-04,step.max=5){
+survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.ini=NULL,max.it.beta=200,max.it.rho=30,beta.ini=NULL,detail.rho=FALSE,detail.beta=FALSE,n.legendre=NULL,method="LAML",tol.beta=1e-04,tol.rho=1e-04,step.max=5,type="overall",cluster=NULL){
 
 	#------------------------------------------
 	# initialization
@@ -3035,7 +3272,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 	formula <- stats::as.formula(formula)
 	
-	if (!(method %in% c("LAML","LCV"))) stop("method should be LAML or LCV")
+	if (!(method %in% c("LAML","LCV"))) stop("method should be 'LAML' or 'LCV'")
+
+	if (!(type %in% c("overall","net","mult"))) stop("type should be either 'overall' for hazard regression, 'net' for excess hazard regression, or 'mult' for relative mortality ratio' regression")
 
 	data <- as.data.frame(unclass(data),stringsAsFactors=TRUE) # converts all characters to factors
 	
@@ -3068,15 +3307,29 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 	expected.name <- deparse(substitute(expected))
 	expected <- eval(substitute(expected), data)
 	
-	if (is.null(expected)){
+	cluster.name <- deparse(substitute(cluster))
 	
-		type <- "overall"
-		expected <- rep(0,n)
+	if (type!="mult"){
+	
+		if (is.null(expected)){
+		
+			type <- "overall"
+			expected <- rep(0,n)
+			
+		}else{
+		
+			type <- "net"
+			expected <- as.numeric(expected)
+		}
+		
+		if (is.null(n.legendre)) n.legendre <- 20
 		
 	}else{
-	
-		type <- "net"
+
 		expected <- as.numeric(expected)
+		
+		if (is.null(n.legendre)) n.legendre <- 10
+
 	}
 
 	if (is.null(t0)){
@@ -3151,6 +3404,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 			# corrected variance implementation
 			if (model$method=="LAML") model <- cor.var(model)
 			
+			# robust variance
+			if (cluster.name!="NULL") model <- robust.var(model, data, cluster.name)
+			
 			# factor levels for prediction
 			model$factor.structure <- factor.structure
 			
@@ -3166,7 +3422,10 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 			build$optim.rho <- 0 # so the model knows that we do NOT need to calculate the derivatives of LCV or LAML
 			
 			model <- survPen.fit(build,data=data,formula=formula,max.it.beta=max.it.beta,beta.ini=beta.ini,detail.beta=detail.beta,method=method,tol.beta=tol.beta)
-
+			
+			# robust variance
+			if (cluster.name!="NULL") model <- robust.var(model, data, cluster.name)
+			
 			# factor levels for prediction
 			model$factor.structure <- factor.structure
 			
@@ -3192,6 +3451,9 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 
 		# Inversion of initial reparameterization
 		model <- inv.repam(model, X.ini, S.pen.ini)
+		
+		# robust variance
+		if (cluster.name!="NULL") model <- robust.var(model, data, cluster.name)	
 		
 		# factor levels for prediction
 		model$factor.structure <- factor.structure
@@ -3248,7 +3510,7 @@ survPen <- function(formula,data,t1,t0=NULL,event,expected=NULL,lambda=NULL,rho.
 #' # Setting up the model before fitting
 #' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
 #' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
-#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' expected=rep(0,100),expected.name=NULL,type="overall",n.legendre=20,
 #' cl="survPen(form,data,t1=time,event=event)",beta.ini=NULL)
 #'  
 #' # fitting
@@ -3318,7 +3580,8 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   is.pwcst <- build$is.pwcst
   if(is.null(build$optim.rho)) build$optim.rho <- 0
   
-  pwcst.weights <- build$pwcst.weights
+  pwcst.weights <- build$pwcst.weights ; if(is.null(pwcst.weights)){pwcst.weights<-matrix(0,nrow=1,ncol=1)} # turn into zero matrix because the C function would not accept a NULL object
+	
   pwcst.breaks <- build$pwcst.breaks
   
   leg <- build$leg
@@ -3336,13 +3599,13 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
   if (is.null(beta.ini)) {beta.ini=c(log(sum(event)/sum(t1)),rep(0,df.para+df.smooth-1))}
 
-  # if there are "by" variables or if there is a piecewise constant hazard specification, we set all initial betas to zero
+  # if there are "by" variables or if there is a piecewise constant hazard specification, we set all initial betas close to zero (0.01)
   if (any(sapply(list.smf,`[`,"by")!="NULL") | 
 	any(sapply(list.tensor,`[`,"by")!="NULL") |
 	any(sapply(list.tint,`[`,"by")!="NULL") | 
 	build$is.pwcst){
 
-	beta.ini=rep(0,df.para+df.smooth)
+	beta.ini=rep(0.01,df.para+df.smooth)
 
   }	
 
@@ -3354,7 +3617,6 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   names(beta) <- colnames(X)
   ll.unpen <- Algo.optim$ll.unpen
   ll.pen <- Algo.optim$ll.pen
-  haz.GL <- Algo.optim$haz.GL
   iter.beta <- Algo.optim$iter.beta
   #-------------------------------------------------------------------
 
@@ -3364,19 +3626,16 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
   #-------------------------------------------------------------------
   # Gradient and Hessian at convergence
-  if (is.pwcst){
-  
-	deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL[[i]]*pwcst.weights[,i])
-	
-  }else{
-  
-	deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL[[i]]*tm*leg$weights[i])
-	
-  }
-  
-  deriv.2.list <- lapply(1:n.legendre, function(i) X.GL[[i]]%cross%(deriv.list[[i]]))
+						
+	deriv.cumul.hazard <- DerivCumulHazard(X.GL,leg$weights,tm,n.legendre,n,p,beta,expected,type,is.pwcst,pwcst.weights)
+		
+	f.first <- deriv.cumul.hazard$f.first
+	f.second <- deriv.cumul.hazard$f.second
+ 
+	# To save computation time in next steps
+	haz.GL <- HazGL(X.GL,n.legendre,beta)
+		
 
-  f.first <- Reduce("+",deriv.list)
 
   # gradient
   if (type=="net"){
@@ -3388,8 +3647,6 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
   grad.beta <- grad.unpen.beta-S%vec%beta
 
   # Hessian
-
-  f.second <- Reduce("+",deriv.2.list)
 
   if (type=="net"){
 	Hess.unpen.beta <- -f.second + X%cross%(X*event*expected*ft1/(ft1+expected)^2)
@@ -3569,9 +3826,21 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 	#------------------------------- gradient of LAML and LCV
 			# first derivatives of beta Hessian
 			
-			grad.list <- grad_rho(X.GL, GL.temp, haz.GL, deriv.rho.beta, leg$weights,
-			tm, nb.smooth, p, n.legendre, S.list, temp.LAML, Vp, S.beta, beta, inverse.new.S,
-			X, temp.deriv3, event, expected, type, Ve, mat.temp, method)
+			if(type=="mult"){
+			
+				grad.list <- grad_rho_mult(X.GL, GL.temp, haz.GL, deriv.rho.beta, leg$weights,
+				tm, nb.smooth, p, n.legendre, S.list, temp.LAML, Vp, S.beta, beta, inverse.new.S,
+				X, event, expected, Ve, mat.temp, method)
+			
+			}else{
+			
+				grad.list <- grad_rho(X.GL, GL.temp, haz.GL, deriv.rho.beta, leg$weights,
+				tm, nb.smooth, p, n.legendre, S.list, temp.LAML, Vp, S.beta, beta, inverse.new.S,
+				X, temp.deriv3, event, expected, type, Ve, mat.temp, method)
+			
+			
+			}
+			
 			
 			grad.rho <- grad.list$grad_rho
 			
@@ -3644,11 +3913,24 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 			X.GL.Q <- lapply(1:n.legendre, function(i) X.GL[[i]]%mult%Q)	
 			#----------------------------------------------------------------------------------------
 		
-			Hess.rho <- Hess_rho(X.GL, X.GL.Q, GL.temp, haz.GL, deriv2.rho.beta, deriv.rho.beta, leg$weights,
-			tm, nb.smooth, p, n.legendre, deriv.rho.inv.Hess.beta, deriv.rho.Hess.unpen.beta, S.list, minus.eigen.inv.Hess.beta,
-			temp.LAML, temp.LAML2, Vp, S.beta, beta, inverse.new.S,
-			X, X.Q, temp.deriv3, temp.deriv4, event, expected, type,
-			Ve, deriv.rho.Ve, mat.temp, deriv.mat.temp, eigen.mat.temp, method)
+			if(type=="mult"){
+			
+				Hess.rho <- Hess_rho_mult(X.GL, X.GL.Q, GL.temp, haz.GL, deriv2.rho.beta, deriv.rho.beta, leg$weights,
+				tm, nb.smooth, p, n.legendre, deriv.rho.inv.Hess.beta, deriv.rho.Hess.unpen.beta, S.list, minus.eigen.inv.Hess.beta,
+				temp.LAML, temp.LAML2, Vp, S.beta, beta, inverse.new.S,
+				X, X.Q, event, expected,
+				Ve, deriv.rho.Ve, mat.temp, deriv.mat.temp, eigen.mat.temp, method)
+				
+			}else{
+			
+				Hess.rho <- Hess_rho(X.GL, X.GL.Q, GL.temp, haz.GL, deriv2.rho.beta, deriv.rho.beta, leg$weights,
+				tm, nb.smooth, p, n.legendre, deriv.rho.inv.Hess.beta, deriv.rho.Hess.unpen.beta, S.list, minus.eigen.inv.Hess.beta,
+				temp.LAML, temp.LAML2, Vp, S.beta, beta, inverse.new.S,
+				X, X.Q, temp.deriv3, temp.deriv4, event, expected, type,
+				Ve, deriv.rho.Ve, mat.temp, deriv.mat.temp, eigen.mat.temp, method)
+			
+			
+			}
 
 		
 			if(method=="LCV") Hess.rho <- Hess.rho + Hess.LCV1
@@ -3701,8 +3983,8 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 #' @param newdata.ref data frame giving the new covariates value for the reference population (used only when type="HR")
 #' @param n.legendre number of nodes to approximate the cumulative hazard by Gauss-Legendre quadrature; default is 50
 #' @param conf.int numeric value giving the precision of the confidence intervals; default is 0.95
-#' @param do.surv If TRUE, the survival and its lower and upper confidence values are computed. Survival computation requires numerical integration and can be time-consuming so if you only want the hazard use do.surv=FALSE; default is TRUE
-#' @param type, if type="lpmatrix" returns the design matrix (or linear predictor matrix) corresponding to the new values of the covariates; if equals "HR", returns the predicted HR and CIs between newdata and newdata.ref; default is "standard" for classical hazard and survival estimation
+#' @param do.surv If TRUE (the default), the survival (or cumulative ratio for type='mult') and its lower and upper confidence values are computed. Survival computation requires numerical integration and can be time-consuming so if you only want the hazard use do.surv=FALSE; default is TRUE
+#' @param type, if type="lpmatrix" returns the design matrix (or linear predictor matrix) corresponding to the new values of the covariates; if equals "HR", returns the predicted HR and survival difference (with CIs) between newdata and newdata.ref; default is "standard" for classical hazard and survival estimation
 #' @param exclude.random if TRUE all random effects are set to zero; default is FALSE
 #' @param get.deriv.H if TRUE, the derivatives wrt to the regression parameters of the cumulative hazard are returned; default is FALSE
 #' @param ... other arguments
@@ -3711,15 +3993,28 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 #' using Delta method. The confidence intervals on the survival scale are then \code{CI.surv = exp(-exp(CI.U))}
 #' @return List of objects:
 #' \item{haz}{hazard predicted by the model}
-#' \item{haz.inf}{lower value for the confidence interval on the hazard based on the Bayesian covariance matrix Vp (Wood et al. 2016)}
-#' \item{haz.sup}{Upper value for the confidence interval on the hazard based on the Bayesian covariance matrix Vp}
+#' \item{haz.inf}{lower value for the confidence interval of the hazard based on the Bayesian covariance matrix Vp (Wood et al. 2016)}
+#' \item{haz.sup}{Upper value for the confidence interval of the hazard based on the Bayesian covariance matrix Vp}
 #' \item{surv}{survival predicted by the model}
-#' \item{surv.inf}{lower value for the confidence interval on the survival based on the Bayesian covariance matrix Vp}
-#' \item{surv.sup}{Upper value for the confidence interval on the survival based on the Bayesian covariance matrix Vp}
+#' \item{surv.inf}{lower value for the confidence interval of the survival based on the Bayesian covariance matrix Vp}
+#' \item{surv.sup}{Upper value for the confidence interval of the survival based on the Bayesian covariance matrix Vp}
 #' \item{deriv.H}{derivatives wrt to the regression parameters of the cumulative hazard. Useful to calculate standardized survival}
 #' \item{HR}{predicted hazard ratio ; only when type = "HR"}
-#' \item{HR.inf}{lower value for the confidence interval on the hazard ratio based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
-#' \item{HR.sup}{Upper value for the confidence interval on the hazard ratio based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
+#' \item{HR.inf}{lower value for the confidence interval of the hazard ratio based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
+#' \item{HR.sup}{Upper value for the confidence interval of the hazard ratio based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
+#' \item{surv.diff}{predicted relative difference ; only when type = "HR"}
+#' \item{surv.diff.inf}{lower value for the confidence interval of the survival difference based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
+#' \item{surv.diff.sup}{Upper value for the confidence interval of the survival difference based on the Bayesian covariance matrix Vp  ; only when type = "HR"}
+#' \item{ratio}{relative mortality ratio predicted by the model ; only for relative mortality ratio model (type="mult")}
+#' \item{ratio.inf}{lower value for the confidence interval of the relative mortality ratio based on the Bayesian covariance matrix Vp (Wood et al. 2016); only for relative mortality ratio model (type="mult")}
+#' \item{ratio.sup}{Upper value for the confidence interval of the relative mortality ratio on the Bayesian covariance matrix Vp; only for relative mortality ratio model (type="mult")}
+#' \item{cumul.ratio}{cumulative relative mortality ratio predicted by the model ; only for relative mortality ratio model (type="mult")}
+#' \item{cumul.ratio.inf}{lower value for the confidence interval of the cumulative relative mortality ratio based on the Bayesian covariance matrix Vp (Wood et al. 2016); only for relative mortality ratio model (type="mult")}
+#' \item{cumul.ratio.sup}{Upper value for the confidence interval of the cumulative relative mortality ratio on the Bayesian covariance matrix Vp; only for relative mortality ratio model (type="mult")}
+#' \item{RR}{predicted ratio of relative mortality ratios ; only for relative mortality ratio model when type = "HR"}
+#' \item{RR.inf}{lower value for the confidence interval of the ratio of relative mortality ratios based on the Bayesian covariance matrix Vp  ; only for relative mortality ratio model when type = "HR"}
+#' \item{RR.sup}{Upper value for the confidence interval of the ratio of relative mortality ratios based on the Bayesian covariance matrix Vp  ; only for relative mortality ratio model when type = "HR"}
+
 #' @export
 #'
 #' @references
@@ -3751,15 +4046,36 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 #' predHR_1$HR.sup
 #' 
 #' # predicting hazard ratio at 3 years according to age (with reference age of 50)
+#' # and difference of survival at 3 years
 #' newdata3 <- data.frame(fu=3,age=seq(30,90,by=1))
 #' newdata.ref3 <- data.frame(fu=3,age=rep(50,times=61))
 #' predHR_3 <- predict(mod1,newdata=newdata3,newdata.ref=newdata.ref3,type="HR")
+#'
+#' # Hazard ratio
 #' predHR_3$HR
 #' predHR_3$HR.inf
 #' predHR_3$HR.sup
+#' 
+#'
+#' # Difference of survival
+#' predHR_3$diff.surv
+#' predHR_3$diff.surv.inf
+#' predHR_3$diff.surv.sup
+#'
 predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.int=0.95,do.surv=TRUE,type="standard",exclude.random=FALSE,get.deriv.H=FALSE,...){
 
 	if (!inherits(object,"survPen")) stop("object is not of class survPen")
+	
+	# Choose robust variance if available
+	if (!is.null(object$Vr)){
+	
+		Variance <- object$Vr
+
+	}else{
+	
+		Variance <- object$Vp # bayesian covariance matrix
+	
+	}
 	
 	# we apply the initial factor structure to newdata
 	factor.structure <- object$factor.structure
@@ -3815,9 +4131,9 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		haz.ratio <- exp(log.haz.ratio)
 		
 		# Confidence intervals
-		if (!is.null(object$Vp)){
+		if (!is.null(Variance)){
 		
-			std<-sqrt(rowSums((X%mult%object$Vp)*X))
+			std<-sqrt(rowSums((X%mult%Variance)*X))
 			haz.ratio.inf <- as.vector(exp(log.haz.ratio-qt.norm*std))
 			haz.ratio.sup <- as.vector(exp(log.haz.ratio+qt.norm*std))
 		
@@ -3825,14 +4141,26 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		
 			haz.ratio.inf <- NULL
 			haz.ratio.sup <- NULL
+			
 		
 		}
 		
-		return(list(HR=haz.ratio,HR.inf=haz.ratio.inf,HR.sup=haz.ratio.sup))
+		if (!do.surv){
+			
+			if (object$type=="mult"){
+
+				return(list(RR=haz.ratio,RR.inf=haz.ratio.inf,RR.sup=haz.ratio.sup))
+				
+			}else{
+			
+				return(list(HR=haz.ratio,HR.inf=haz.ratio.inf,HR.sup=haz.ratio.sup))
+				
+			}
+			
+		}
 		
 	}
 
-	
 	
 	# estimated linear predictor
 	pred.haz <- myMat%vec%beta
@@ -3899,6 +4227,18 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 			cumul.haz <- lapply(1:n.legendre, function(i) (exp((X.GL[[i]]%vec%beta)))*pwcst.weights[,i])
 
 			cumul.haz <- Reduce("+",cumul.haz)
+			
+			if (type=="HR"){
+			
+				X.GL.ref <- lapply(1:n.legendre, function(i) X.func(pwcst.nodes[i],newdata.ref,object))
+
+				cumul.haz.ref <- lapply(1:n.legendre, function(i) (exp((X.GL.ref[[i]]%vec%beta)))*pwcst.weights[,i])
+
+				cumul.haz.ref <- Reduce("+",cumul.haz.ref)
+			
+			}
+			
+			
 
 		}else{
 		
@@ -3907,6 +4247,18 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 			cumul.haz <- lapply(1:n.legendre, function(i) (exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
 			
 			cumul.haz <- tm*Reduce("+",cumul.haz)
+			
+			if (type=="HR"){
+			
+				X.GL.ref <- lapply(1:n.legendre, function(i) X.func(tm*leg$nodes[i]+(t0+t1)/2,newdata.ref,object))
+
+				cumul.haz.ref <- lapply(1:n.legendre, function(i) (exp((X.GL.ref[[i]]%vec%beta)))*leg$weights[i])
+			
+				cumul.haz.ref <- tm*Reduce("+",cumul.haz.ref)
+			
+			
+			}
+			
 		
 		}
 		
@@ -3914,6 +4266,16 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		
 
 		surv=exp(-cumul.haz)
+		
+		surv.ref = NULL
+		
+		if (type=="HR"){
+		
+			surv.ref = exp(-cumul.haz.ref)
+		
+			diff.surv = surv - surv.ref
+		
+		}
 
 	}else{
 	
@@ -3921,10 +4283,10 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 	
 	}
 
-	if (!is.null(object$Vp)){ # only the Bayesian covariance matrix Vp is used for confidence intervals
+	if (!is.null(Variance)){ 
 
 		# confidence intervals for hazard
-		std <- sqrt(rowSums((myMat%mult%object$Vp)*myMat))
+		std <- sqrt(rowSums((myMat%mult%Variance)*myMat))
 		haz.inf <- as.vector(exp(pred.haz-qt.norm*std))
 		haz.sup <- as.vector(exp(pred.haz+qt.norm*std))
 
@@ -3937,10 +4299,27 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 				deriv.cumul.haz <- lapply(1:n.legendre, function(i) X.GL[[i]]*(exp((X.GL[[i]]%vec%beta)))*pwcst.weights[,i])
 				deriv.cumul.haz <- Reduce("+",deriv.cumul.haz)
 				
+				if (type=="HR"){
+				
+					deriv.cumul.haz.ref <- lapply(1:n.legendre, function(i) X.GL.ref[[i]]*(exp((X.GL.ref[[i]]%vec%beta)))*pwcst.weights[,i])
+					deriv.cumul.haz.ref <- Reduce("+",deriv.cumul.haz.ref)
+				
+				
+				}
+				
 			}else{
 			
 				deriv.cumul.haz <- lapply(1:n.legendre, function(i) X.GL[[i]]*(exp((X.GL[[i]]%vec%beta)))*leg$weights[i])
 				deriv.cumul.haz <- tm*Reduce("+",deriv.cumul.haz)
+				
+				
+				if (type=="HR"){
+				
+					deriv.cumul.haz.ref <- lapply(1:n.legendre, function(i) X.GL.ref[[i]]*(exp((X.GL.ref[[i]]%vec%beta)))*leg$weights[i])
+					deriv.cumul.haz.ref <- tm*Reduce("+",deriv.cumul.haz.ref)
+				
+				
+				}
 				
 			}
 			
@@ -3955,6 +4334,22 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 
 			surv.inf=exp(-exp(log.cumul.haz+qt.norm*std.log.cumul))
 			surv.sup=exp(-exp(log.cumul.haz-qt.norm*std.log.cumul))
+			
+			
+			if (type=="HR"){
+			
+				deriv.diff.surv <- -deriv.cumul.haz*surv + deriv.cumul.haz.ref*surv.ref
+			
+				std.diff.surv <- sqrt(rowSums((deriv.diff.surv%mult%Variance)*deriv.diff.surv))
+
+				diff.surv.inf=diff.surv-qt.norm*std.diff.surv
+				diff.surv.sup=diff.surv+qt.norm*std.diff.surv
+				
+				return(list(HR=haz.ratio,HR.inf=haz.ratio.inf,HR.sup=haz.ratio.sup,
+				diff.surv=diff.surv,diff.surv.inf=diff.surv.inf,diff.surv.sup=diff.surv.sup))
+			
+			}
+			
 			
 		}else{
 		
@@ -3975,8 +4370,19 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 	
 	if (!get.deriv.H) deriv.cumul.haz <- NULL
 	
-	res<-list(haz=haz,haz.inf=haz.inf,haz.sup=haz.sup,
+	if (object$type=="mult"){
+
+		 res<-list(ratio=haz,ratio.inf=haz.inf,ratio.sup=haz.sup,
+		 cumul.ratio=cumul.haz,
+		 cumul.ratio.inf=exp(log.cumul.haz-qt.norm*std.log.cumul),
+		 cumul.ratio.sup=exp(log.cumul.haz+qt.norm*std.log.cumul))
+		
+	}else{
+
+		 res<-list(haz=haz,haz.inf=haz.inf,haz.sup=haz.sup,
 	     surv=surv,surv.inf=surv.inf,surv.sup=surv.sup,deriv.H=deriv.cumul.haz)
+		 
+	}
 
 	class(res) <- "predict.survPen"
 	
@@ -4001,6 +4407,7 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 #' \item{call}{the original survPen call}
 #' \item{formula}{the original survPen formula}
 #' \item{coefficients}{reports the regression parameters estimates for unpenalized terms with the associated standard errors}
+#' \item{HR_TAB}{reports the exponential of the regression parameters estimates for unpenalized terms with the associated CI}
 #' \item{edf.per.smooth}{reports the edf associated with each smooth term}
 #' \item{random}{TRUE if there are random effects in the model}
 #' \item{random.effects}{reports the estimates of the log standard deviation (log(sd)) of every random effects plus the estimated standard error (also on the log(sd) scale)}
@@ -4042,7 +4449,15 @@ summary.survPen <- function(object,...){
 		
 		}else{
 		
-			type <- "hazard model"
+			if (object$type=="mult"){
+			
+				type <- "relative mortality ratio model"
+			
+			}else{
+		
+				type <- "hazard model"
+		
+			}
 		
 		}
 		
@@ -4058,8 +4473,16 @@ summary.survPen <- function(object,...){
 				type <- "penalized excess hazard model"
 			
 		}else{
+		
+				if (object$type=="mult"){
 			
-				type <- "penalized hazard model"
+					type <- "penalized relative mortality ratio model"
+			
+				}else{
+				
+					type <- "penalized hazard model"
+				
+				}
 			
 		}
 		
@@ -4118,13 +4541,25 @@ summary.survPen <- function(object,...){
 	}
 	
 	# standard errors
+	
+	# Choose robust variance if available
+	if (!is.null(object$Vr)){
+	
+		Variance <- object$Vr
+
+	}else{
+	
+		Variance <- object$Vp # bayesian covariance matrix
+	
+	}
+	
 	if (object$p==1){
 	
-		SE <- sqrt(object$Vp)
+		SE <- sqrt(Variance)
 	
 	}else{
 	
-		SE <- sqrt(diag(object$Vp))
+		SE <- sqrt(diag(Variance))
 	
 	}
 	
@@ -4137,12 +4572,23 @@ summary.survPen <- function(object,...){
 	TAB <- cbind(Estimate = object$coefficients[1:len], `Std. Error` = SE[1:len], 
         `z value` = zvalue, `Pr(>|z|)` = pvalue)
 	
+	
+	HR <- exp(object$coefficients[1:len])
+	
+	HR.inf <- exp(object$coefficients[1:len] - stats::qnorm(0.975)*SE[1:len])
+	
+	HR.sup <- exp(object$coefficients[1:len] + stats::qnorm(0.975)*SE[1:len])
+	
+	HR_TAB <- cbind(Estimate = round(HR,3), `lower (95% CI)` = round(HR.inf,3), 
+        `upper (95% CI)`= round(HR.sup,3))
+	
 	attrs <- attributes(object$lambda)
 	
 	res <- list(type = type,
 			call=object$call,
 			formula=object$formula,
 			coefficients=TAB,
+			HR_TAB=HR_TAB,
 			edf.per.smooth=edf.per.smooth,
 			random=random,
 			random.effects=TAB.random,
@@ -4193,6 +4639,10 @@ print.summary.survPen <- function(x, digits = max(3, getOption("digits") - 2),
 	print(x$call)
 	cat("\nParametric coefficients:\n")
 	stats::printCoefmat(x$coefficients, P.value=TRUE, has.Pvalue=TRUE, digits = digits, signif.stars = signif.stars, na.print = "NA", ...)
+
+	cat("\nParametric coefficients (exp):\n")
+	stats::printCoefmat(x$HR_TAB, P.value=FALSE, has.Pvalue=FALSE, digits = digits, signif.stars = signif.stars, na.print = "NA", ...)
+
 
 	if (x$random){
 
@@ -4265,7 +4715,6 @@ print.summary.survPen <- function(x, digits = max(3, getOption("digits") - 2),
 #' \item{beta}{estimated regression parameters}
 #' \item{ll.unpen}{log-likelihood at convergence}
 #' \item{ll.pen}{penalized log-likelihood at convergence}
-#' \item{haz.GL}{list of all the matrix-vector multiplications X.GL[[i]]\%*\%beta for Gauss Legendre integration. Useful to avoid repeating operations in \code{\link{survPen.fit}}}
 #' \item{iter.beta}{number of iterations needed to converge}
 #' @export
 #'
@@ -4286,7 +4735,7 @@ print.summary.survPen <- function(x, digits = max(3, getOption("digits") - 2),
 #' # Setting up the model before fitting
 #' model.c <- model.cons(form,lambda=0,data.spec=data,t1=t1,t1.name="time",
 #' t0=rep(0,100),t0.name="t0",event=event,event.name="event",
-#' expected=NULL,expected.name=NULL,type="overall",n.legendre=20,
+#' expected=rep(0,100),expected.name=NULL,type="overall",n.legendre=20,
 #' cl="survPen(form,data,t1=time,event=event)",beta.ini=NULL)
 #'  
 #' # Estimating the regression parameters at given smoothing parameter (here lambda=0)
@@ -4311,9 +4760,11 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 	S <- build$S # final penalty matrix
 	p <- build$p # number of regression parameters
 	
+	n <- nrow(X) # number of individuals
+	
 	is.pwcst <- build$is.pwcst
-	pwcst.weights <- build$pwcst.weights
-
+	pwcst.weights <- build$pwcst.weights ; if(is.null(pwcst.weights)){pwcst.weights<-matrix(0,nrow=1,ncol=1)} # turn into zero matrix because the C function would not accept a NULL object
+	
 	k=1
 	ll.pen=100
 	ll.pen.old=1
@@ -4353,19 +4804,12 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		ftold=exp(predold)
 
 		# first derivatives of the cumulative hazard
-		haz.GL.old <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%betaold))
-		
-		if (is.pwcst){
-		
-			deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL.old[[i]]*pwcst.weights[,i])
-		
-		}else{
-		
-			deriv.list <- lapply(1:n.legendre, function(i) X.GL[[i]]*haz.GL.old[[i]]*leg$weights[i]*tm)
-
-		}
-		
-		f.first <- Reduce("+",deriv.list)
+		deriv.cumul.hazard <- DerivCumulHazard(X.GL,leg$weights,tm,n.legendre,n,p,betaold,expected,type,is.pwcst,pwcst.weights)
+	
+		integral <- deriv.cumul.hazard$integral
+		f.first <- deriv.cumul.hazard$f.first
+		f.second <- deriv.cumul.hazard$f.second
+	
 		
 		# log-likelihoods gradients
 		if (type=="net"){
@@ -4376,10 +4820,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		
 		grad <- grad.unpen.beta-S%vec%betaold
 		
-		# second derivatives of the cumulative hazard
-		deriv.2.list <- lapply(1:n.legendre, function(i) X.GL[[i]]%cross%(deriv.list[[i]]))
 		
-		f.second <- Reduce("+",deriv.2.list)
         
 		# log-likelihoods Hessians
 		if (type=="net"){
@@ -4423,24 +4864,22 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		Vp <- chol2inv(R)
 
 
-		# cumulative hazard
-		if (is.pwcst){
-		
-			integral <- lapply(1:n.legendre, function(i) haz.GL.old[[i]]*pwcst.weights[,i])
-			integral <- Reduce("+",integral)
-		
-		}else{
-		
-			integral <- lapply(1:n.legendre, function(i) haz.GL.old[[i]]*leg$weights[i])
-			integral <- tm*Reduce("+",integral)
-
-		}
+	
 		
 		# log-likelihoods
 		if (type=="net"){
 			ll.unpenold <- sum(-integral + event*log(ftold+expected))
 		}else{
-			ll.unpenold <- sum(-integral + event*predold)
+		
+			if(type=="mult"){
+			
+				ll.unpenold <- sum(-expected*integral + event*predold)
+			
+			}else{
+		
+				ll.unpenold <- sum(-integral + event*predold)
+				
+			}
 		}
 
 		ll.pen.old <- ll.unpenold-0.5*sum(betaold*(S%vec%betaold))
@@ -4456,28 +4895,27 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 		pred1 <- X%vec%beta1
 		ft1=exp(pred1)
 		
-		# New cumulative hazard
-		# haz.GL will serve in survPen.fit to derive the derivatives with respect to the smoothing parameters
-		haz.GL <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%beta1))
-
-		if (is.pwcst){
 		
-			integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*pwcst.weights[,i])
-			integral <- Reduce("+",integral)
 		
-		}else{
 		
-			integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
-			integral <- tm*Reduce("+",integral)
-			
-		}
+		integral <- CumulHazard(X.GL,leg$weights,tm,n.legendre,n,beta1,is.pwcst,pwcst.weights)
 		
+	
 		
 		# New log-likelihoods
 		if (type=="net"){
 			ll.unpen <- sum(-integral + event*log(ft1+expected))
 		}else{
-			ll.unpen <- sum(-integral + event*pred1)
+		
+			if(type=="mult"){
+		
+				ll.unpen <- sum(-expected*integral + event*pred1)
+		
+			}else{
+		
+				ll.unpen <- sum(-integral + event*pred1)
+				
+			}	
 		}
 		
 		ll.pen <- ll.unpen - 0.5*sum(beta1*(S%vec%beta1))
@@ -4503,26 +4941,28 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 				pred1 <- X%vec%beta1
 				ft1=exp(pred1)
 
-				# New cumulative hazard
-				haz.GL <- lapply(1:n.legendre, function(i) exp(X.GL[[i]]%vec%beta1))
 
-				if (is.pwcst){
+
+				integral <- CumulHazard(X.GL,leg$weights,tm,n.legendre,n,beta1,is.pwcst,pwcst.weights)
 		
-					integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*pwcst.weights[,i])
-					integral <- Reduce("+",integral)
+				
 		
-				}else{
-		
-					integral <- lapply(1:n.legendre, function(i) haz.GL[[i]]*leg$weights[i])
-					integral <- tm*Reduce("+",integral)
-					
-				}
 		
 				# New log-likelihoods
 				if (type=="net"){
 					ll.unpen <- sum(-integral + event*log(ft1+expected))
 				}else{
-					ll.unpen <- sum(-integral + event*pred1)
+				
+					if(type=="mult"){
+				
+						ll.unpen <- sum(-expected*integral + event*pred1)
+					
+					}else{
+				
+						ll.unpen <- sum(-integral + event*pred1)
+						
+					}	
+						
 				}
 
 				ll.pen <- ll.unpen - 0.5*sum(beta1*(S%vec%beta1))
@@ -4558,7 +4998,7 @@ NR.beta <- function(build,beta.ini,detail.beta,max.it.beta=200,tol.beta=1e-04){
 
 	}
 
-	list(beta=beta1,ll.unpen=ll.unpen,ll.pen=ll.pen,haz.GL=haz.GL,iter.beta=k-1)
+	list(beta=beta1,ll.unpen=ll.unpen,ll.pen=ll.pen,iter.beta=k-1)
 
 }
 
@@ -4920,10 +5360,482 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 
 
+# Getting break values from names of age classes
+
+get_breaks <- function(AgeClass){
+
+	le <- length(AgeClass)
+	
+	# the number of characters to retrieve depends on each lower bound of the Intervals
+	# and these lower bounds might be of length 1 (for ages < 10), 2 (10 <= ages < 100) or 3 (ages >= 100)
+	# all we know is that the lower bound is before a ';'
+	last_position <- regexpr(";",AgeClass) - 1
+
+	as.numeric(sapply(1:le,function(i) substr(AgeClass[i], start=2, stop=last_position[i])))
+
+}
+
+
+#----------------------------------------------------------------------------------------------------------------
+# predSNS : prediction of grouped indicators : population (net) survival and age-standardized (net) survival
+#----------------------------------------------------------------------------------------------------------------
+
+#' Prediction of grouped indicators : population (net) survival (PNS) and age-standardized (net) survival (SNS)
+#'
+#' Allows the prediction of population and age-standardized (net) survival as well as associated confidence intervals
+#'
+#' @param model a fitted \code{survPen} model
+#' @param time.points vector of follow-up values
+#' @param newdata dataset containing the original age values used for fitting 
+#' @param weight.table dataset containing the age classes used for standardization, must be in the same format as the elements of the following list \code{\link{list.wicss}}
+#' @param var.name list containing one element : the column name in newdata that reports age values. This element should be named after the age variable present in the model formula. Typically, if newdata contains an 'age' column while the model uses a centered age 'agec', the list should be: list(agec="age")
+#' @param var.model list containing one element : the function that allows retrieving the age variable used in model formula from original age. Typically for age centered on 50, list(agec=function(age) age - 50)
+#' @param conf.int numeric value giving the precision of the confidence intervals; default is 0.95
+#' @param method should be either 'exact' or 'approx'. The 'exact' method uses all age values in newdata for predictions. The 'approx' method uses either newdata$age (if age values are whole numbers) or floor(newdata$age) + 0.5 (if age values are not whole numbers) and then removes duplicates to reduce computational cost.
+#' @param n.legendre number of nodes to approximate the cumulative hazard by Gauss-Legendre quadrature; default is 50
+#' @return List of nine elements
+#' \item{class.table}{Number of individuals in each age class}
+#' \item{SNS}{Vector of predicted age-standardized (net) survival}
+#' \item{SNS.inf}{Lower bound of confidence intervals associated with predicted age-standardized (net) survival}
+#' \item{SNS.sup}{Upper bound of confidence intervals associated with predicted age-standardized (net) survival}
+#' \item{PNS}{Vector of predicted population (net) survival}
+#' \item{PNS.inf}{Lower bound of confidence intervals associated with predicted population (net) survival}
+#' \item{PNS.sup}{Upper bound of confidence intervals associated with predicted population (net) survival}
+#' \item{PNS_per_class}{matrix of predicted population (net) survival in each age class}
+#' \item{PNS_per_class.inf}{Lower bound of confidence intervals associated with predicted population (net) survival in each age class}
+#' \item{PNS_per_class.sup}{Upper bound of confidence intervals associated with predicted population (net) survival in each age class}
+#' @export
+#'
+#' @details
+#' The weight table used should always be in the same format as elements of \code{\link{list.wicss}}.
+#' Only age-standardization is possible for now. All other variables necessary for model predictions should be fixed to a single value.
+#' For simplicity, in what follows we will consider that survival only depends on time and age.
+#'
+#' @section Population Net Survival (PNS):
+#' For a given group of individuals, PNS at time t is defined as
+#' \deqn{PNS(t)=\sum_i 1/n*S_i(t,a_i)}
+#' where \eqn{a_i} is the age of individual \eqn{i} 
+#'
+#' @section Standardized Net Survival (SNS):
+#' SNS at time t is defined as
+#' \deqn{SNS(t)=\sum_i w_i*S_i(t,a_i)}
+#' where \eqn{a_i} is the age of individual \eqn{i} and \eqn{w_i=w_{ref j(i)}/n_{j(i)}}.
+#' \eqn{w_{ref j(i)}} is the weigth of age class \eqn{j} in the reference population (it corresponds to weight.table$AgeWeights).
+#' Where \eqn{n_{j(i)}} is the total number of individuals present in age class \eqn{j(i)}: the age class of individual \eqn{i}. 
+#' 
+#' @section Standardized Net Survival (SNS) with method="approx":
+#' For large datasets, SNS calculation is quite heavy. To reduce computational cost, the idea is to regroup individuals who have similar age values. By using floor(age) + 0.5 instead of age, the gain will be substantial while the prediction error will be minimal (method="approx" will give slightly different predictions compared to method="exact").
+#' Of course, if the provided age values are whole numbers then said provided age values will be used directly for grouping and there will be no prediction error (method="approx" and method="exact" will give the exact same predictions). 
+#' \deqn{SNS(t)=\sum_a \tilde{w}_a*S(t,a)}
+#' The sum is here calculated over all possible values of age instead of all individuals.
+#' We have \eqn{\tilde{w}_a=n_a*w_{ref j(a)}/n_{j(a)}}.
+#' Where \eqn{j(a)} is the age class of age \eqn{a} while \eqn{n_a} is the number of individuals with age \eqn{a}.
+#'
+#' @section Variance and Confidence Intervals:
+#' Confidence intervals for SNS are derived assuming normality of log(log(-SNS)) 
+#' Lower and upper bound are given by
+#' \deqn{IC_{95\%}(SNS)=[SNS^{1.96*\sqrt(Var(Log(Delta_{SNS})))};SNS^{-1.96*\sqrt(Var(Log(Delta_{SNS})))}]}
+#' with 
+#' \deqn{Delta_{SNS}=-log(SNS)}
+#' \eqn{Var(Log(Delta_{SNS}))} is derived by Delta method.
+#'
+#' Confidence intervals for PNS are derived in the exact same way.
+#'
+#' @references
+#' Corazziari, I., Quinn, M., & Capocaccia, R. (2004). Standard cancer patient population for age standardising survival ratios. European journal of cancer (Oxford, England : 1990), 40(15), 2307–2316. https://doi.org/10.1016/j.ejca.2004.07.002. \cr \cr
+#'
+#' @examples
+#' 
+#' data(datCancer)
+#' data(list.wicss)
+#'
+#' don <- datCancer
+#' don$agec <- don$age - 50 # using centered age for modelling
+#'
+#' #-------------------- model with time and age
+#'
+#' knots.t<-quantile(don$fu[don$dead==1],probs=seq(0,1,length=6)) # knots for time
+#' knots.agec<-quantile(don$agec[don$dead==1],probs=seq(0,1,length=5))   # knots for age
+#'
+#' formula <- as.formula(~tensor(fu,agec,df=c(length(knots.t),length(knots.agec)),
+#' knots=list(fu=knots.t,age=knots.agec)))
+#'
+#' mod <- survPen(formula,data=don,t1=fu,event=dead,n.legendre=20, expected=rate)
+#'
+#'
+#'#-------------------- Age classes and associated weights for age-standardized 
+#'# net survival prediction
+#'			
+#' # weights of type 1					
+#' wicss <- list.wicss[["1"]]					
+#'					
+#' # to estimate population net survival, prediction dataframe
+#' # is needed. It should contain original data for age 
+#'
+#' pred.pop <- data.frame(age=don$age)
+#'
+#' #-------------------- prediction : age-standardized net survival and population net survival
+#'
+#' pred <- predSNS(mod,time.points=seq(0,5,by=0.1),newdata=pred.pop,
+#' weight.table=wicss,var.name=list(agec="age"),
+#' var.model=list(agec=function(age) age - 50),method="approx")
+#'
+#'
+#'
+predSNS <- function(model,time.points,newdata,weight.table,var.name,var.model,
+conf.int=0.95, method = "exact", n.legendre=50){
+
+	if (!inherits(model,"survPen")) stop("model is not of class survPen")
+
+	if (!(method %in% c("exact","approx"))) stop("method should be either 'exact' or 'approx'")
+	
+	if(!("data.frame"%in%class(weight.table))) stop("weight.table is not a data.frame")
+	if(!identical(names(weight.table),c("AgeClass","AgeWeights"))) stop("weight.table does not have the same format as elements of list.wicss. It should have only two columns: 'AgeClass' and 'AgeWeights'")
+	if(!identical(sum(weight.table$AgeWeights),1)) stop("Elements of weight.table$AgeWeights do not sum to 1")
+	
+	
+	#_______________________________________________________________________
+	#----------------- Building Age classes 
+	
+	age.name <- var.name[[1]]
+	
+	# getting break values for age classes
+	weight.table$breaks <- get_breaks(weight.table$AgeClass)
+
+	# Creating AgeClass inside newdata
+	newdata$AgeClass <- cut(newdata[,age.name],c(weight.table$breaks,max(newdata[,age.name])) , right=F,  include.lowest=T,labels=weight.table$AgeClass)
+	
+	# Number of age classes
+	class.nb <- length(weight.table$AgeClass)
+
+	# merge newdata with weight table in order to retrieve weights
+	newdata <- merge(newdata, weight.table, all.x=T,by="AgeClass")
+
+	
+	#_______________________________________________________________________
+	#----------------- Managing Weights associated with Age classes 
+	
+	# Total Number of individuals
+	n <- nrow(newdata)
+	
+	# Number of individuals in each class
+	temp.table <- table(newdata$AgeClass)
+	
+	# Number of individuals in each class put into a table to merge with newdata
+	class.table <- data.frame(nclass=as.numeric(temp.table))
+	class.table$AgeClass <- names(temp.table)
+	
+	# merge newdata with class table in order to retrieve number of individuals per age class
+	newdata <- merge(newdata,class.table,all.x=T,by="AgeClass") 
+
+
+	#_______________________________________________________________________
+	#----------------- Reducing data size if approx method 
+	
+	if (method=="exact"){
+	
+		newdata$n.approx <- 1
+
+	}else{
+	
+	
+		# if age is not a whole number : approximating age by floor(age) + 0.5
+		if(any(newdata[,age.name]!=floor(newdata[,age.name]))){
+		
+			newdata[,age.name] <- floor(newdata[,age.name]) + 0.5
+			
+			message("Age values are not whole numbers, the approx method is then based on floor(age) + 0.5")
+			
+		}	
+	
+		# Number of unique values of approximated age
+		table.age.approx <- table(newdata[,age.name])
+	
+		# Number of unique values of age put into a table to merge with newdata
+		approx.table <- data.frame(n.approx=as.numeric(table.age.approx))
+		approx.table[,age.name] <- names(table.age.approx)
+	
+		# merge newdata with approx table in order to retrieve number of individuals per approximation
+		newdata <- merge(newdata,approx.table,all.x=T,by=age.name) 
+	
+		# keeping only the first occurrence of every approximated age
+		newdata <- newdata[!duplicated(newdata[,age.name]),]
+		
+	
+	}
+
+
+	#_______________________________________________________________________
+	#----------------- 	Weights for building indicators
+	
+	newdata$w.SNS <- newdata$n.approx*newdata$AgeWeights/newdata$nclass # weights associated with each class for
+	# standardized (net) survival
+	
+	newdata$w.PNS <- newdata$n.approx*1/n # weights associated with each individual for
+	# population (net) survival
+	
+
+
+	#_______________________________________________________________________
+	#----------------- 	Adding time points
+	
+	full.time.points <- rep(time.points,each=nrow(newdata))
+	newdata <- newdata[rep(1:nrow(newdata), times = length(time.points)), ]
+	newdata[,model$t1.name] <- full.time.points
+
+
+	#_______________________________________________________________________
+	#----------------- 	Predictions
+	
+	# Get transformed variable for predictions (typically centered age)
+	newdata[,names(var.model)[1]] <- var.model[[1]](newdata[,age.name]) 
+	
+	# Survival predictions
+	pred <- stats::predict(model, newdata=newdata, n.legendre=n.legendre, get.deriv.H=TRUE)
+
+	newdata$fu <- newdata[,model$t1.name] # vector of time points
+	newdata$surv <- pred$surv # vector of predicted survival probabilities
+
+
+	#_____________________________________________________________
+	#-------------------- Standardized Net Survival
+	SNS <- with(newdata,tapply(w.SNS*surv, fu,  sum))
+	
+	#_____________________________________________________________
+	#-------------------- Population Net Survival (all individuals)
+	PNS <- with(newdata,tapply(w.PNS*surv, fu,  sum))
+
+	#_____________________________________________________________
+	#-------------------- Population Net Survival in each class
+	
+	PNS_per_class  <- with(newdata,tapply(n.approx*surv/nclass,  interaction(AgeClass,fu),  sum))
+	PNS_per_class <- t(matrix(PNS_per_class,nrow=class.nb))			
+	
+	colnames(PNS_per_class) <- weight.table$AgeClass # labels for age classes
+	rownames(PNS_per_class) <- sort(unique(newdata$fu)) # all possible values of follow up times
+
+
+	#_____________________________________________________________
+	#_____________________________________________________________
+	#_____________________________________________________________
+	#_____________________________________________________________
+	#-------------------------- Confidence Intervals via Delta Method
+
+	qt.norm <- stats::qnorm(1-(1-conf.int)/2)
+
+	deriv.H <- pred$deriv.H # retrieve derivatives of cumulative hazard
+
+	#_____________________________________________________________
+	#-------------------- Standardized Net Survival
+	
+	deriv.SNS <- - with(newdata,rowsum(w.SNS*surv*deriv.H,fu)) 
+
+	# Choose robust variance if available
+	if (!is.null(model$Vr)){
+	
+		Variance <- model$Vr
+
+	}else{
+	
+		Variance <- model$Vp # bayesian covariance matrix
+	
+	}
+
+	std.SNS <- sqrt(rowSums((deriv.SNS%mult%Variance)*deriv.SNS))
+	std.log.cumul.SNS <- std.SNS/(SNS*abs(log(SNS)))
+
+	SNS.inf <- SNS^exp(qt.norm*std.log.cumul.SNS)
+	SNS.sup <- SNS^exp(-qt.norm*std.log.cumul.SNS)
+
+
+	#_____________________________________________________________
+	#-------------------- Population Net Survival (all individuals)
+	
+	deriv.PNS <- - with(newdata,rowsum(w.PNS*surv*deriv.H,fu))
+
+	std.PNS <- sqrt(rowSums((deriv.PNS%mult%Variance)*deriv.PNS))
+	std.log.cumul.PNS <- std.PNS/(PNS*abs(log(PNS)))
+
+	PNS.inf <- PNS^exp(qt.norm*std.log.cumul.PNS)
+	PNS.sup <- PNS^exp(-qt.norm*std.log.cumul.PNS)
+
+	#_____________________________________________________________
+	#-------------------- Population Net Survival in each class
+
+	deriv.PNS_per_class <- - with(newdata,rowsum((n.approx/nclass)*surv*deriv.H,interaction(fu,AgeClass)))
+
+	PNS_per_class.inf <- PNS_per_class.sup <- PNS_per_class
+
+	# Number of follow-up time values
+	fu.nb <- length(rownames(PNS_per_class))
+
+	for (j in 1:class.nb){
+	
+		indice.temp <- (1+fu.nb*(j-1)):(fu.nb*j)
+	
+		deriv.PNS_per_class_matrix <- matrix(deriv.PNS_per_class[indice.temp,],nrow=fu.nb)
+	
+		std.temp <- sqrt(rowSums((deriv.PNS_per_class_matrix%mult%Variance)*deriv.PNS_per_class_matrix))
+		std.log.cumul.temp <- std.temp/(PNS_per_class[,j]*abs(log(PNS_per_class[,j])))
+
+		PNS_per_class.inf[,j] <- PNS_per_class[,j]^exp(qt.norm*std.log.cumul.temp)
+		PNS_per_class.sup[,j] <- PNS_per_class[,j]^exp(-qt.norm*std.log.cumul.temp)
+	
+	
+	}
+	
+
+	list(class.table=class.table, SNS=SNS,SNS.inf=SNS.inf,SNS.sup=SNS.sup,
+	
+	PNS=PNS,PNS.inf=PNS.inf,PNS.sup=PNS.sup,
+	
+	PNS_per_class=PNS_per_class,PNS_per_class.inf=PNS_per_class.inf,
+	PNS_per_class.sup=PNS_per_class.sup)
+
+}
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : predSNS
+#----------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------------------------------
+# splitmult : Split original dataset at specified times to fit a multiplicative model
+#----------------------------------------------------------------------------------------------------------------
+
+#' Split original dataset at specified times to fit a multiplicative model
+#'
+#' This function allows splitting the original dataset in order to retrieve all the expected mortality rates available 
+#' according to each individual's follow-up time. Typically, the expected mortality rates come from national mortality tables
+#' and values are available for every combination of age and year (often with 1-year increment).
+#'
+#' This function is close to the survsplit function proposed in relsurv package, but it is simpler since fewer features are needed.
+#'
+#' @param data orginal datset
+#' @param cut vector of timepoints to cut at (usually every year of follow-up)
+#' @param start	character string with name of start variable (will be created and set to zero if it does not exist)
+#' @param end character string with name of event time variable
+#' @param event character string with name of censoring indicator
+#' @return split dataset with follow-up time split at specified times. An 'id_row' column is added to identify original row numbers
+#'
+#' @export
+#'
+#' @examples
+#' library(survPen)
+#' data(datCancer)
+#' data(expected.table)
+#'
+#' #-------------------- creating split dataset for multiplicative model
+#'
+#' splitdat <- splitmult(datCancer, cut = (1:5), end = "fu", 
+#' event = "dead")
+#'			
+#' #-------------------- merging with expected mortality table
+#'
+#' # deriving current age and year (closest whole number)
+#' splitdat$age_current <- floor(splitdat$age + splitdat$fu + 0.5)
+#'
+#' splitdat$year_current <- floor(splitdat$yod + splitdat$fu + 0.5)
+#'
+#'
+#' splitdat <- merge(splitdat, expected.table, 
+#'                 by.x=c("age_current","year_current"), by.y=c("Age","Year"),all.x=TRUE)
+#'
+#'
+splitmult <- function (data, cut, start=NULL, end, event) 
+{
+    ntimes <- length(cut)
+    n <- nrow(data)
+    p <- ncol(data)
+ 
+	# retrieving row names to identify individuals
+	data$id_row <- rownames(data)
+ 
+	# creating all start and end times
+	sttime <- c(rep(0, n), rep(cut, each = n))
+    endtime <- rep(c(cut, Inf), each = n)
+    
+	# duplicating data according to cut values
+    newdata <- lapply(data, rep, ntimes + 1) # data transformed into a list
+    eventtime <- newdata[[end]]
+	
+	# dealing with potential left troncature
+    
+	if(is.null(start)){
+
+		start <- "start"
+		
+		starttime <- rep(0, length = (ntimes + 1) * n)
+		
+	}else{
+	
+		if (start %in% names(data)){ 
+			
+			starttime <- newdata[[start]]
+			
+		}else{
+		
+			starttime <- rep(0, length = (ntimes + 1) * n)
+		
+		}
+	
+	}
+	
+	
+	starttime <- pmax(sttime, starttime)
+
+	# making sure to get proper event indicator
+	status <- ifelse(eventtime <= endtime & eventtime > starttime, newdata[[event]], 0)
+    endtime <- pmin(endtime, eventtime)
+    
+	# we drop all lines with sarting times > ending times
+	drop <- starttime >= endtime
+	
+    newdata <- do.call("data.frame", newdata) # data transformed back to a dataframe
+    newdata <- newdata[!drop, ]
+    newdata[, start] <- starttime[!drop]
+    newdata[, end] <- endtime[!drop]
+    newdata[, event] <- status[!drop]
+
+    newdata
+}
+
+#----------------------------------------------------------------------------------------------------------------
+# END of code : splitmult
+#----------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 
 #################################################################################################################
-
