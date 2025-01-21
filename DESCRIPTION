@@ -1,7 +1,7 @@
 Package: survPen
 Title: Multidimensional Penalized Splines for (Excess) Hazard Models,
         Relative Mortality Ratio Models and Marginal Intensity Models
-Version: 2.0.0
+Version: 2.0.1
 Authors@R: c(person(given = "Mathieu",
                         family = "Fauvernier",
                         role = c("aut", "cre"),
@@ -39,9 +39,9 @@ RoxygenNote: 7.3.2
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2024-12-02 13:09:00 UTC; FAUVERNIERMA
+Packaged: 2025-01-15 10:58:47 UTC; fauvernierma
 Repository: CRAN
-Date/Publication: 2024-12-02 14:00:02 UTC
+Date/Publication: 2025-01-21 18:20:02 UTC
 Author: Mathieu Fauvernier [aut, cre],
   Laurent Roche [aut],
   Laurent Remontet [aut],

@@ -2790,6 +2790,7 @@ robust.var <- function(model, data, cluster.name, n.legendre = 50){
 
 #' (Excess) hazard model with (multidimensional) penalized splines and integrated smoothness estimation
 #'
+#' Please have a look to \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for a thorough description. \cr \cr
 #' Fits an (excess) hazard model with (multidimensional) penalized splines allowing for
 #' time-dependent effects, non-linear effects and interactions between several continuous covariates. The linear predictor is specified on the logarithm of the (excess) hazard. Smooth terms are represented using
 #' cubic regression splines with associated quadratic penalties. For multidimensional smooths, tensor product splines or tensor product interactions
@@ -4103,6 +4104,7 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 	# estimated regression parameters
 	beta <- object$coefficients
 	
+	pos.rd <- NULL
 	if (exclude.random){
 	
 		vec.name <- names(beta)
@@ -4114,6 +4116,7 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		if (length(pos.rd)!=0){
 		
 			beta[pos.rd] <- 0
+			myMat[,pos.rd] <- 0 #important, so standard error are correctly calculated
 		
 		}
 
@@ -4132,6 +4135,10 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		
 		# Confidence intervals
 		if (!is.null(Variance)){
+		
+			if (exclude.random & length(pos.rd)!=0){
+				X[,pos.rd] <- 0
+			}
 		
 			std<-sqrt(rowSums((X%mult%Variance)*X))
 			haz.ratio.inf <- as.vector(exp(log.haz.ratio-qt.norm*std))
@@ -4293,6 +4300,27 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 		if (do.surv){
 			# if any cumul hazard is zero, we put it at a very low positive value
 			cumul.haz[cumul.haz==0] <- 1e-16
+
+			# we must remove the columns of the specified cluster when exclude.random = TRUE
+			if (exclude.random & length(pos.rd)!=0){
+				
+				for (i in 1:n.legendre){
+				
+					X.GL[[i]][,pos.rd] <- 0
+				
+				}
+				
+				if (type=="HR"){
+				
+					for (i in 1:n.legendre){
+				
+					X.GL.ref[[i]][,pos.rd] <- 0
+				
+					}
+				
+				}
+				
+			}
 
 			if (object$is.pwcst){
 			

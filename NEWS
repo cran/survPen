@@ -1,3 +1,10 @@
+survPen v2.0.1
+==============
+
+Changes:
+* In predict.survPen, for frailty models there was a mistake in the calculation of standard error with zero random effect ("exclude.random=TRUE")
+
+
 survPen v2.0.0
 ==============
 
