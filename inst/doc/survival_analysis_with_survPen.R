@@ -641,7 +641,7 @@ data(HeartFailure)
 
 # We are going to fit an unpenalized spline on the log-marginal intensity in order to use the robust variance with 
 # a proper theoretical background. Indeed, with penalized splines it is advised to use
-# bootstrap for confidence intervals (Coz et al. submitted to Biostatistics).
+# bootstrap for confidence intervals (Coz et al. article in preparation).
 
 # Number of knots for an unpenalized natural cubic spline
 df.t <- 4

@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2025-01-15" />
+<meta name="date" content="2025-03-08" />
 
 <title>Survival analysis with survPen</title>
 
@@ -1521,7 +1521,7 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Survival analysis with survPen</h1>
-<h4 class="date">2025-01-15</h4>
+<h4 class="date">2025-03-08</h4>
 
 </div>
 
@@ -2642,7 +2642,7 @@ lines(new.time,pred.ratio$ratio.sup,lty=2)</code></pre>
 </div>
 <div id="sectionM" class="section level1">
 <h1>Marginal hazard (intensity) models</h1>
-<p>In presence of correlated time-to-event data (for example recurrent event data), robust standard errors accounting for said correlation need to be derived. The <code>survPen</code> package allows deriving such robust standard errors based on sandwich estimators (often called Huber sandwich estimator, see also Coz et al. submitted to Biostatistics, for an example in the recurrent event setting).</p>
+<p>In presence of correlated time-to-event data (for example recurrent event data), robust standard errors accounting for said correlation need to be derived. The <code>survPen</code> package allows deriving such robust standard errors based on sandwich estimators (often called Huber sandwich estimator, see also Coz et al. article in preparation, for an example in the recurrent event setting).</p>
 <p>The user only needs to specify the <code>cluster</code> variable defining the statistical units for which repeated observations are available. This specification is performed via the <code>cluster</code> argument.</p>
 <p>Let’s fit an example model for the marginal intensity of hospitalization events in heart failure patients</p>
 <pre class="r"><code>
@@ -2651,7 +2651,7 @@ data(HeartFailure)
 
 # We are going to fit an unpenalized spline on the log-marginal intensity in order to use the robust variance with 
 # a proper theoretical background. Indeed, with penalized splines it is advised to use
-# bootstrap for confidence intervals (Coz et al. submitted to Biostatistics).
+# bootstrap for confidence intervals (Coz et al. article in preparation).
 
 # Number of knots for an unpenalized natural cubic spline
 df.t &lt;- 4
@@ -3148,7 +3148,7 @@ mod.excess.pen &lt;- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate
 <ul>
 <li>Andersen, P. K., Borch-Johnsen, K., Deckert, T., Green, A., Hougaard, P., Keiding, N., and Kreiner, S. (1985). A Cox regression model for the relative mortality and its application to diabetes mellitus survival data. Biometrics, 921-932.</li>
 <li>Charvat, H., Remontet, L., Bossard, N., Roche, L., Dejardin, O., Rachet, B., … and Belot, A. (2016). A multilevel excess hazard model to estimate net survival on hierarchical data allowing for non linear and non proportional effects of covariates. Statistics in medicine, 35(18), 3066-3084.</li>
-<li>Coz, E., Charvat, H., Maucort-Boulch, D., and Fauvernier, M. (submitted to Biostatistics). Flexible penalized marginal intensity models for recurrent event data.</li>
+<li>Coz, E., Charvat, H., Maucort-Boulch, D., and Fauvernier, M. (article in preparation). Flexible penalized marginal intensity models for recurrent event data.</li>
 <li>Danieli, C., Remontet, L., Bossard, N., Roche, L., and Belot, A. (2012). Estimating net survival: the importance of allowing for informative censoring. Statistics in medicine, 31(8), 775-786.</li>
 <li>Estève, J., Benhamou, E., Croasdale, M., and Raymond, L. (1990) Relative survival and the estimation of net survival: elements for further discussion. Stat. Med., 9, 529-538.</li>
 <li>Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N. and Remontet, L. (2019). Multi-dimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, Journal of the Royal Statistical Society, series C. <a href="https://doi.org/10.1111/rssc.12368" class="uri">https://doi.org/10.1111/rssc.12368</a>.</li>
