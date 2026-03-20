@@ -3672,7 +3672,7 @@ survPen.fit <- function(build,data,formula,max.it.beta=200,beta.ini=NULL,detail.
 
 		vp.temp[which(vp.temp<1e-7)] <- 1e-7
 
-		R <- try(chol(U.temp%mult%diag(vp.temp)%mult%t(U.temp)),silent=TRUE)
+		R <- try(chol(U.temp%mult%diag(vp.temp,nrow=length(vp.temp))%mult%t(U.temp)),silent=TRUE)
 
 		warning("beta Hessian was perturbed at convergence")
 	}
@@ -5360,7 +5360,7 @@ NR.rho <- function(build,rho.ini,data,formula,max.it.beta=200,max.it.rho=30,beta
 
 		vp.temp[which(vp.temp<1e-7)] <- 1e-7
 
-		R <- try(chol(U.temp%mult%diag(vp.temp)%mult%t(U.temp)),silent=TRUE)
+		R <- try(chol(U.temp%mult%diag(vp.temp,nrow=length(vp.temp))%mult%t(U.temp)),silent=TRUE)
 
 		warning("message NR.rho: rho Hessian was perturbed at convergence")
 	}

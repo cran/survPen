@@ -1,10 +1,10 @@
-dc4d9f4ddb1af6feba2a0235d9f99554 *DESCRIPTION
+9d303d6f8566b5910b276e338c888f3a *DESCRIPTION
 09f04999f8c005eb0f2d8e764be596fa *LICENSE
 03d3c160f0b0caab28a4e2cd65ad12ca *NAMESPACE
-c864249ca4dff5113dca0573dae8882c *NEWS
+51c1280ce660bcd44f27095d9b8c7e0d *NEWS
 6d4611fda0fa9870630afc73b75bd9c9 *R/RcppExports.R
-f0521a0401b06b295a81223d88f2e72a *R/survPenV2_02.r
-25f063ed26af62a87508621889b650e4 *build/vignette.rds
+9caaa79a502e3ab32d9c7a18b0cc2240 *R/survPenV2_03.r
+ad0b2111c161f07c67c9fe6b88a7eb26 *build/vignette.rds
 01b81d14d2fae61bee9f2260196e514c *data/HeartFailure.RData
 f1bab3787d1963ac0ae0c7de6f43fb30 *data/datCancer.RData
 c267f1275b22cfde51124d6360833b9b *data/expected.table.RData
@@ -12,7 +12,7 @@ c267f1275b22cfde51124d6360833b9b *data/expected.table.RData
 928ebf297a37728ee10ced7b9bad97dc *inst/CITATION
 1f37cf19f062935f0ee3195adb9021b8 *inst/doc/survival_analysis_with_survPen.R
 8264a124b13fbb1f755334472a88e780 *inst/doc/survival_analysis_with_survPen.Rmd
-e6071309c11147fa84482b49d2f6cf27 *inst/doc/survival_analysis_with_survPen.html
+0b9fc5b412cd1fddc2835748e73d212a *inst/doc/survival_analysis_with_survPen.html
 596c4a11c7e938920d7d9e2c98b4e5fa *man/CumulHazard.Rd
 e62753d8916f623b94b9349243f0192e *man/DerivCumulHazard.Rd
 f257e69695281a91ee2251cb22d64b4a *man/HazGL.Rd
