@@ -41,6 +41,12 @@ mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead)
 mod.unpen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=0)
 
 ## ----fig.show='hold'----------------------------------------------------------
+vec.col <- c("#e5be97",
+"#a8beec",
+"#b8d8a7",
+"#e6aecc",
+"#7ed6da")
+
 new.time <- seq(0,5,length=100)
 pred.cst <- predict(mod.cst,data.frame(fu=new.time))
 pred.pwcst <- predict(mod.pwcst,data.frame(fu=new.time))
@@ -53,15 +59,15 @@ lwd1 <- 2
 
 par(mfrow=c(1,1))
 plot(new.time,pred.cst$haz,type="l",ylim=c(0,0.2),main="hazard vs time",
-xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
-segments(x0=new.time[1:99],x1=new.time[2:100],y0=pred.pwcst$haz[1:99],col="blue3",lwd=lwd1)
-lines(new.time,pred.lin$haz,col="green3",lwd=lwd1)
-lines(new.time,pred.rcs$haz,col="orange",lwd=lwd1)
-lines(new.time,pred.pen$haz,col="red",lwd=lwd1)
+xlab="time since diagnosis (years)",ylab="hazard",col=vec.col[1],lwd=lwd1)
+segments(x0=new.time[1:99],x1=new.time[2:100],y0=pred.pwcst$haz[1:99],col=vec.col[2],lwd=lwd1)
+lines(new.time,pred.lin$haz,col=vec.col[3],lwd=lwd1)
+lines(new.time,pred.rcs$haz,col=vec.col[4],lwd=lwd1)
+lines(new.time,pred.pen$haz,col=vec.col[5],lwd=lwd1)
 
 legend("topright",
 legend=c("constant","piecewise constant","log-linear","cubic spline","penalized cubic spline"),
-col=c("black","blue3","green3","orange","red"),
+col=vec.col,
 lty=rep(1,5),lwd=rep(lwd1,5))
 
 
@@ -590,6 +596,36 @@ xlab="time since diagnosis (years)",ylab="survival",lwd=lwd1)
 
 
 ## ----fig.show='hold'----------------------------------------------------------
+f.pen <- ~ smf(fu) 
+
+vec.lambda <- c(0,1000,10^6)
+new.time <- seq(0,5,length=100)
+
+
+par(mfrow=c(1,3),mar=c(3,3,1.5,0.5),mgp=c(1.5,0.5,0))
+
+for (i in (1:3)){
+
+	mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=vec.lambda[i])
+	pred.pen <- predict(mod.pen,data.frame(fu=new.time))
+
+	plot(new.time,pred.pen$haz,type="l",ylim=c(0,0.2),main=paste0("hazard vs time, lambda = ",vec.lambda[i]),
+	xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
+
+}
+
+## ----fig.show='hold'----------------------------------------------------------
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,rho.ini=5)
+
+mod.excess.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate,rho.ini=5,beta.ini=mod.pen$coef)
+
+## ----fig.show='hold'----------------------------------------------------------
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE)
+
+## ----fig.show='hold'----------------------------------------------------------
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE,detail.beta=TRUE)
+
+## ----fig.show='hold'----------------------------------------------------------
 
 library(survPen)
 data(datCancer)
@@ -706,34 +742,8 @@ robust <- sqrt(diag(mod_MI$Vr))
 print(naive)
 print(robust)
 
+# Retrieving the quasi-likelihood information criterion (QIC, Pan 2001)
 
-## ----fig.show='hold'----------------------------------------------------------
-f.pen <- ~ smf(fu) 
+print(mod_MI$qic)
 
-vec.lambda <- c(0,1000,10^6)
-new.time <- seq(0,5,length=100)
-
-
-par(mfrow=c(1,3),mar=c(3,3,1.5,0.5),mgp=c(1.5,0.5,0))
-
-for (i in (1:3)){
-
-	mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=vec.lambda[i])
-	pred.pen <- predict(mod.pen,data.frame(fu=new.time))
-
-	plot(new.time,pred.pen$haz,type="l",ylim=c(0,0.2),main=paste0("hazard vs time, lambda = ",vec.lambda[i]),
-	xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
-
-}
-
-## ----fig.show='hold'----------------------------------------------------------
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,rho.ini=5)
-
-mod.excess.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate,rho.ini=5,beta.ini=mod.pen$coef)
-
-## ----fig.show='hold'----------------------------------------------------------
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE)
-
-## ----fig.show='hold'----------------------------------------------------------
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE,detail.beta=TRUE)
 

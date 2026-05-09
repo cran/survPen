@@ -23,23 +23,122 @@ date: "`r Sys.Date()`"
 output:
   rmarkdown::html_document:
     toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: false
     toc_depth: 2
-    toc_float: true
-    theme: lumen
+    number_sections: false
+    theme: cerulean
+    highlight: tango # Pour une coloration syntaxique du code plus punchy
     keep_md: true
 vignette: >
   %\VignetteIndexEntry{Survival analysis with survPen}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 
-
 ---
 
-
 <style>
+/* Main titles (#) with a colored background */
+/* Titres principaux (H1) - Ton Terracotta */
+h1, h2 {
+  color: #2c3e50;
+  border-bottom: 2px solid #1890ff;
+  padding-bottom: 10px;
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+.alert-red {
+  color: #d9534f;        /* A professional 'danger' red */
+  font-weight: bold;      /* Makes it bold */
+  font-size: 1.1em;      /* Slightly larger than regular text */
+}
+
+.highlight-box {
+  background-color: #eef6fb;
+  border-left: 5px solid #2980b9;
+  padding: 14px 18px;
+  margin: 20px 0;
+  border-radius: 0 6px 6px 0;
+  font-style: normal;  /* l'italique sur du texte technique nuit à la lisibilité */
+}
+.highlight-box::before {
+  content: "ℹ️  ";
+}
+
+
+/* Sidebar (TOC) styling to make it look more like a book */
+.tocify {
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Soft shadow for depth */
+}
+
+/* Active section in the sidebar */
+.tocify-item.list-group-item.active {
+  background-color: #2c3e50 !important;
+  border-color: #2c3e50 !important;
+}
+
+/* Justify the body text for a professional look */
 body {
-text-align: justify}
+  text-align: justify;
+}
+
+
+/* Mise en avant des équations mathématiques */
+.math.display {
+  display: block;           /* Force la formule à se comporter comme un bloc */
+  background-color: #fffaf0; /* FloralWhite : un fond crème très doux */
+  padding: 20px;
+  margin: 20px 0;
+  border-left: 6px solid #1890ff; /* Bordure */
+  border-radius: 4px;
+  overflow-x: auto;         /* Pour les formules trop longues sur mobile */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+
+/* 3. Code en ligne (ex: noms de packages) - On enlève le rose ! */
+code {
+  color: #a04000;          /* Brun-orange profond au lieu du rose */
+  background-color: #fdf2e9; /* Fond pêche très pâle */
+  border: none;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+/* 4. Coloration syntaxique dans les blocs de code (Overrides) */
+/* Les chaînes de caractères (strings) - Un olive doux */
+.hljs-string, .st { 
+  color: #556b2f !important; 
+}
+
+/* Les mots-clés (keywords) - Un rouge brique sombre */
+.hljs-keyword, .kw { 
+  color: #7b241c !important; 
+  font-weight: bold; 
+}
+
+/* Les commentaires - Un gris-brun discret */
+.hljs-comment, .co { 
+  color: #99a3a4 !important; 
+  font-style: italic; 
+}
+
+/* Les fonctions - Un bleu ardoise chaud */
+.hljs-function, .fu { 
+  color: #2e4053 !important; 
+}
+
+
+
 </style>
+
 
 
 ```{r setup, include = FALSE}
@@ -54,14 +153,16 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Introduction
+# General comments
 
-
-The `survPen` package was designed to fit hazard and excess hazard models with multidimensional penalized splines 
-allowing for time-dependent effects, non-linear effects and interactions between several covariates (Fauvernier et al. 2019). 
+The `survPen` package (Fauvernier et al. 2019a) was designed to fit hazard and excess hazard models with multidimensional penalized splines 
+allowing for time-dependent effects, non-linear effects and interactions between several covariates (Fauvernier et al. 2019b). 
 The linear predictor in `survPen` is the logarithm of the (excess) hazard. 
 Since version 2.0.0, `survPen` allows models for the logarithm of the relative mortality ratio between a cohort and a reference population [here](#sectionR).
 Besides, models for the logarithm of the marginal hazard (intensity) are also available (with robust estimation of standard errors) [here](#sectionM).
+
+
+# Hazard models
 
 As the hazard function fully determines the distribution of the time-to-event, this modelling approach is actually 
 well-suited for many time-to-event analyses: the splines provide the flexibility required for modelling the hazard 
@@ -96,7 +197,7 @@ readily be improved using the `survPen` package by adding a penalized spline to 
 the hazard ratio estimates, the user would then obtain a smooth estimate of the baseline hazard as well as smooth 
 survival curves estimates.
 
-### Details
+## Introduction
 
 In time-to-event analysis, we may deal with one or several covariates whose functional forms, 
 time-dependent effects and interaction structure are challenging to specify. In this context, penalized hazard models 
@@ -135,10 +236,14 @@ Each $g_j$ is then associated with zero, one or several smoothing parameters.
 The cumulative hazard included in the log-likelihood is approximated by Gauss-Legendre quadrature for numerical stability.
 
 
-The method is detailed in Fauvernier et al. (in revision in the Journal of the Royal Statistical Society series C).
+The package was published in the Journal of Open Source Software (Fauvernier et al. 2019a) while the method is detailed in Fauvernier et al. (2019b)
 
 
-# The datCancer data
+
+## Getting started
+
+
+### The datCancer data
 
 In the following examples, we will use a simulated dataset that contains artificial data from 2,000 women diagnosed 
 with cervical cancer between 1990 and 2010. End of follow-up is June 30th 2013. The variables are as follows:
@@ -159,10 +264,7 @@ data(datCancer)
 knitr::kable(head(datCancer,10))
 ```
 
-
-
-# Getting started
-
+### Model specification
 
 The model specification should seem natural for users familiar with the `glm` formulation, because the 
 linear predictor is fully and explicitly specified by the model’s formula. In addition to specifiying the 
@@ -174,7 +276,7 @@ since the linear predictor scale is implicit (log-hazard or log-excess hazard).
 Suppose that we are only interested in the effect of the time elapsed since diagnosis on the hazard. 
 Examples of models fitted on the log-hazard scale are shown below:
 
-### Constant hazard model
+#### Constant hazard model
 
 \[ log[h(t)] = \beta_0 \]
 
@@ -183,7 +285,7 @@ f.cst <- ~1
 mod.cst <- survPen(f.cst,data=datCancer,t1=fu,event=dead)
 ```
 
-### Piecewise constant hazard model
+#### Piecewise constant hazard model
 
 
 \[ log[h(t)] = \sum_{k=1}^{p}\beta_k I_k(t) \]
@@ -196,7 +298,7 @@ f.pwcst <- ~pwcst(breaks=seq(0,5,by=0.5))
 mod.pwcst <- survPen(f.pwcst,data=datCancer,t1=fu,event=dead)
 ```
 
-### Log-linear hazard
+#### Log-linear hazard
 
 \[ log[h(t)] = \beta_0 + \beta_1 \times t \]
 
@@ -206,7 +308,7 @@ mod.lin <- survPen(f.lin,data=datCancer,t1=fu,event=dead)
 ```
 
 
-### Restricted cubic splines
+#### Restricted cubic splines
 
 \[ log[h(t)] = f(t) \]
 
@@ -222,7 +324,7 @@ f.rcs <- ~ns(fu,knots=c(0.25, 0.5, 1, 2, 4),Boundary.knots=c(0,5))
 mod.rcs <- survPen(f.rcs,data=datCancer,t1=fu,event=dead)
 ```
 
-### Penalized restricted cubic splines
+#### Penalized restricted cubic splines
 
 We use the same design as before but add a penalty term that controls the smoothness of the fitted curve
 
@@ -246,10 +348,16 @@ mod.unpen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=0)
 ```
 
 
-# Predictions and model outputs
+## Predictions and model outputs
 
 ### Standard predictions
 ```{r, fig.show='hold'}
+vec.col <- c("#e5be97",
+"#a8beec",
+"#b8d8a7",
+"#e6aecc",
+"#7ed6da")
+
 new.time <- seq(0,5,length=100)
 pred.cst <- predict(mod.cst,data.frame(fu=new.time))
 pred.pwcst <- predict(mod.pwcst,data.frame(fu=new.time))
@@ -262,15 +370,15 @@ lwd1 <- 2
 
 par(mfrow=c(1,1))
 plot(new.time,pred.cst$haz,type="l",ylim=c(0,0.2),main="hazard vs time",
-xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
-segments(x0=new.time[1:99],x1=new.time[2:100],y0=pred.pwcst$haz[1:99],col="blue3",lwd=lwd1)
-lines(new.time,pred.lin$haz,col="green3",lwd=lwd1)
-lines(new.time,pred.rcs$haz,col="orange",lwd=lwd1)
-lines(new.time,pred.pen$haz,col="red",lwd=lwd1)
+xlab="time since diagnosis (years)",ylab="hazard",col=vec.col[1],lwd=lwd1)
+segments(x0=new.time[1:99],x1=new.time[2:100],y0=pred.pwcst$haz[1:99],col=vec.col[2],lwd=lwd1)
+lines(new.time,pred.lin$haz,col=vec.col[3],lwd=lwd1)
+lines(new.time,pred.rcs$haz,col=vec.col[4],lwd=lwd1)
+lines(new.time,pred.pen$haz,col=vec.col[5],lwd=lwd1)
 
 legend("topright",
 legend=c("constant","piecewise constant","log-linear","cubic spline","penalized cubic spline"),
-col=c("black","blue3","green3","orange","red"),
+col=vec.col,
 lty=rep(1,5),lwd=rep(lwd1,5))
 
 ```
@@ -412,7 +520,7 @@ mod.pen$edf2
 ```
 
 
-# Smoothing parameter estimation
+### Smoothing parameter estimation
 
 The `survPen` package offers two criteria to estimate the smoothing parameters: LCV for Likelihood Cross Validation 
 and LAML for Laplace Approximate Marginal Likelihood.
@@ -466,7 +574,7 @@ In this case, the functions to minimize give the same smoothing parameter.
 
 
 	
-# Knots location
+### Knots location
 
 Unidimensional penalized spline for time since diagnosis with 5 knots
 ```{r, fig.show='hold'}
@@ -496,7 +604,7 @@ Knots can also be specified by the user
 ```
 
 
-# Excess hazard models
+## Excess hazard models
 
 
 One important feature of the `survPen` package is that it allows fitting penalized excess hazard models.
@@ -561,7 +669,7 @@ legend("bottomleft",legend=c("overall survival","net survival"), col=c("black","
 ```
 
 
-# Tensor product splines
+## Tensor product splines
 
 Tensor product splines represent the key functionality of the `survPen` package. Indeed, they allow us jointly modelling
 non-linearity, time-dependency and interactions.
@@ -789,7 +897,7 @@ using the tensor approach beyond three covariates can be extremely time- and mem
 four covariates if the situation demands it and if you do not have too many degrees of freedom for each marginal basis.
 
 
-# Interactions between smooth terms and factors or parametric terms
+## Interactions between smooth terms and factors or parametric terms
 
 The `smf`, `tensor` and `tint` terms used to specify smooths accept an argument `by` that allows for building varying-coefficient models i.e. for letting
 smoothers ‘interact’ with factors or parametric terms. 
@@ -801,7 +909,12 @@ For continuous variables, simple linear interaction with a smooth term may be sp
 
 where $f$ and $g$ are penalized splines. 
 In `survPen`, this model is specified with formula `smf(t) + smf(t,by=age)`.
-Note that the main effect of age is included in the term `smf(t,by=age)`. You do not want to include the main effect of age, then
+
+<div class="highlight-box">
+**Note:** The main effect of age is included in the term `smf(t,by=age)`.
+</div> 
+
+If you do not want to include the main effect of age, then
 use `tint(t,by=age)`. This is useful if we want to fit the following model for example:
 
 \[ log[h(t,age)]=f(t) + f_2(age) + g(t) \times age \]
@@ -828,8 +941,12 @@ where $f_{women}$ and $f_{men}$ are penalized splines corresponding to the basel
 In this design, the regression parameters for men are completely independent from the parameters for women. 
 The smoothing parameters for men and women ($\lambda_{men}$ and $\lambda_{women}$) are independently estimated as well.
 This model is therefore equivalent to a stratified analysis.
-The model would be specified by using the term `sex + smf(t,by=sex)`. Be careful here, contrary to the continuous setting, `smf(t,by=sex)`
+The model would be specified by using the term `sex + smf(t,by=sex)`. 
+
+<div class="highlight-box">
+**Note:** Be careful here, contrary to the continuous setting, `smf(t,by=sex)`
 is subject to centering constraints and does not include the main effect of sex.
+</div> 
 
 
 The stratified design with common smoothing parameters applied to the above model would impose $\lambda_{men} = \lambda_{women}$.
@@ -1050,7 +1167,7 @@ is particularly useful when several smoothers contain the same continuous `by` v
 Be also careful when using `tint` instead of `smf` since the default df is not the same (5 vs 10).
 
 
-# Frailty models
+## Frailty models
 
 `survPen` allows including independent gaussian random effects, since such effects may be easily implemented 
 though the penalization framework by using a ridge penalty (details in Wood 2017, section 5.8). 
@@ -1203,7 +1320,7 @@ predict(mod.frailty,data.frame(fu=1,cluster=10),exclude.random=TRUE)$surv
 ```
 
 
-# Left truncation
+## Left truncation
 
 The `t0` argument allows specifying entry times in case of left-truncated data
 
@@ -1229,6 +1346,109 @@ plot(new.time,pred.trunc$surv,type="l",ylim=c(0,1),main="Survival",
 xlab="time since diagnosis (years)",ylab="survival",lwd=lwd1)
 
 ```
+
+
+
+## Other useful functionalities
+
+
+### lambda
+
+The `survPen` package estimates the smoothing parameters with either LCV or LAML. However, one
+can be interested in comparing the effect of a smoothing parameter on the predicted hazard or
+survival. The argument `lambda` allows the user to choose specific values for the smoothing parameters.
+
+
+```{r, fig.show='hold'}
+f.pen <- ~ smf(fu) 
+
+vec.lambda <- c(0,1000,10^6)
+new.time <- seq(0,5,length=100)
+
+
+par(mfrow=c(1,3),mar=c(3,3,1.5,0.5),mgp=c(1.5,0.5,0))
+
+for (i in (1:3)){
+
+	mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=vec.lambda[i])
+	pred.pen <- predict(mod.pen,data.frame(fu=new.time))
+
+	plot(new.time,pred.pen$haz,type="l",ylim=c(0,0.2),main=paste0("hazard vs time, lambda = ",vec.lambda[i]),
+	xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
+
+}
+```
+
+
+### beta.ini and rho.ini
+
+If you observe a convergence problem and intend to fix it, a simple option is to change the initial values
+used by the algorithm. The argument `beta.ini` allows you setting the regression parameters to specific values.
+This is especially useful if your excess hazard model fails to converge. Indeed, in that case, you can try to fit
+the corresponding total hazard model and use its estimated regression parameters as initial values for the excess 
+hazard model.
+The argument `rho.ini` allows you choosing initial values for the log smoothing parameters.
+Consider also changing LAML to LCV to see if the convergence problem persists.
+
+```{r, fig.show='hold'}
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,rho.ini=5)
+
+mod.excess.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate,rho.ini=5,beta.ini=mod.pen$coef)
+```
+
+
+### detail.rho and detail.beta
+
+If a convergence problem occurs, it is always instructive to know exactly what is going on
+inside the optimization process. The arguments `detail.rho` and `detail.beta` were made to
+make the user's life easier when dealing with convergence issues.
+
+The example below shows the effect of specifying `detail.rho=TRUE` when fitting a model
+
+```{r, fig.show='hold'}
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE)
+```
+	
+At each iteration, you get:
+
+- rho.old = former values of the log smoothing parameters  
+- rho = current values of the log smoothing parameters   
+- val.old = former value of LCV or LAML (actually, the negative LAML is used)
+- val =  current value of LCV or LAML
+- val-val.old = difference of the two values above 
+- gradient = current value of the first derivative of LCV or LAML wrt log smoothing parameters
+	
+	
+In this example, we see that the first Newton step is huge (86.6 on the log scale is huge). When that
+happens the algorithm forbids the step value to be over the `step.max` argument (default is 5).
+	
+
+
+The example below shows the effect of specifying `detail.rho=TRUE` and `detail.beta=TRUE` 
+when fitting a model and thus illustrates the two nested Newton-Raphson algorithms.
+```{r, fig.show='hold'}
+mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE,detail.beta=TRUE)
+```
+
+Here, within each iteration of the log smoothing parameters, for each iteration of the regression
+parameters, you get:
+
+- betaold = former values of the regression parameters
+- beta =  current values of the regression parameters
+- abs((beta-betaold)/betaold) =  absolute value of the relative difference between current and former 
+regression parameters values (criterion used to check for convergence)
+- ll.pen.old =  former value of the penalized log-likelihood
+- ll.pen =  current value of the penalized log-likelihood
+- ll.pen - ll.pen.old =  difference of the two values above
+ 
+
+When using `detail.rho` or `detail.beta`, you might also see from time to time a warning message indicating that the
+Hessian (of LCV, LAML or the penalized likelihood) has been perturbed. As long as this Hessian perturbation does not 
+occur at the very last iteration, you do not need to worry about this warning. The algorithm is just making sure that the step it is going
+to take is a descent direction. However, if the Hessian perturbation occurs at convergence (whether for the 
+smoothing or regression parameters), it might indicate a convergence issue (see the *Hess.beta.modif* and
+*Hess.rho.modif* values returned by the model).
+
 
 # Relative mortality ratio models {#sectionR}
 
@@ -1409,122 +1629,27 @@ robust <- sqrt(diag(mod_MI$Vr))
 print(naive)
 print(robust)
 
+# Retrieving the quasi-likelihood information criterion (QIC, Pan 2001)
+
+print(mod_MI$qic)
+
 ```
-
-# Other useful functionalities
-
-
-### lambda
-
-The `survPen` package estimates the smoothing parameters with either LCV or LAML. However, one
-can be interested in comparing the effect of a smoothing parameter on the predicted hazard or
-survival. The argument `lambda` allows the user to choose specific values for the smoothing parameters.
-
-
-```{r, fig.show='hold'}
-f.pen <- ~ smf(fu) 
-
-vec.lambda <- c(0,1000,10^6)
-new.time <- seq(0,5,length=100)
-
-
-par(mfrow=c(1,3),mar=c(3,3,1.5,0.5),mgp=c(1.5,0.5,0))
-
-for (i in (1:3)){
-
-	mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,lambda=vec.lambda[i])
-	pred.pen <- predict(mod.pen,data.frame(fu=new.time))
-
-	plot(new.time,pred.pen$haz,type="l",ylim=c(0,0.2),main=paste0("hazard vs time, lambda = ",vec.lambda[i]),
-	xlab="time since diagnosis (years)",ylab="hazard",col="black",lwd=lwd1)
-
-}
-```
-
-
-### beta.ini and rho.ini
-
-If you observe a convergence problem and intend to fix it, a simple option is to change the initial values
-used by the algorithm. The argument `beta.ini` allows you setting the regression parameters to specific values.
-This is especially useful if your excess hazard model fails to converge. Indeed, in that case, you can try to fit
-the corresponding total hazard model and use its estimated regression parameters as initial values for the excess 
-hazard model.
-The argument `rho.ini` allows you choosing initial values for the log smoothing parameters.
-Consider also changing LAML to LCV to see if the convergence problem persists.
-
-```{r, fig.show='hold'}
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,rho.ini=5)
-
-mod.excess.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,expected=rate,rho.ini=5,beta.ini=mod.pen$coef)
-```
-
-
-### detail.rho and detail.beta
-
-If a convergence problem occurs, it is always instructive to know exactly what is going on
-inside the optimization process. The arguments `detail.rho` and `detail.beta` were made to
-make the user's life easier when dealing with convergence issues.
-
-The example below shows the effect of specifying `detail.rho=TRUE` when fitting a model
-
-```{r, fig.show='hold'}
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE)
-```
-	
-At each iteration, you get:
-
-- rho.old = former values of the log smoothing parameters  
-- rho = current values of the log smoothing parameters   
-- val.old = former value of LCV or LAML (actually, the negative LAML is used)
-- val =  current value of LCV or LAML
-- val-val.old = difference of the two values above 
-- gradient = current value of the first derivative of LCV or LAML wrt log smoothing parameters
-	
-	
-In this example, we see that the first Newton step is huge (86.6 on the log scale is huge). When that
-happens the algorithm forbids the step value to be over the `step.max` argument (default is 5).
-	
-
-
-The example below shows the effect of specifying `detail.rho=TRUE` and `detail.beta=TRUE` 
-when fitting a model and thus illustrates the two nested Newton-Raphson algorithms.
-```{r, fig.show='hold'}
-mod.pen <- survPen(f.pen,data=datCancer,t1=fu,event=dead,detail.rho=TRUE,detail.beta=TRUE)
-```
-
-Here, within each iteration of the log smoothing parameters, for each iteration of the regression
-parameters, you get:
-
-- betaold = former values of the regression parameters
-- beta =  current values of the regression parameters
-- abs((beta-betaold)/betaold) =  absolute value of the relative difference between current and former 
-regression parameters values (criterion used to check for convergence)
-- ll.pen.old =  former value of the penalized log-likelihood
-- ll.pen =  current value of the penalized log-likelihood
-- ll.pen - ll.pen.old =  difference of the two values above
- 
-
-When using `detail.rho` or `detail.beta`, you might also see from time to time a warning message indicating that the
-Hessian (of LCV, LAML or the penalized likelihood) has been perturbed. As long as this Hessian perturbation does not 
-occur at the very last iteration, you do not need to worry about this warning. The algorithm is just making sure that the step it is going
-to take is a descent direction. However, if the Hessian perturbation occurs at convergence (whether for the 
-smoothing or regression parameters), it might indicate a convergence issue (see the *Hess.beta.modif* and
-*Hess.rho.modif* values returned by the model).
-
 
 
 # References
 
 - Andersen, P. K., Borch-Johnsen, K., Deckert, T., Green, A., Hougaard, P., Keiding, N., and Kreiner, S. (1985). A Cox regression model for the relative mortality and its application to diabetes mellitus survival data. Biometrics, 921-932.
-- Charvat, H., Remontet, L., Bossard, N., Roche, L., Dejardin, O., Rachet, B., ... and Belot, A. (2016). A multilevel excess hazard model to estimate net survival on hierarchical data allowing for non linear and non proportional effects of covariates. Statistics in medicine, 35(18), 3066-3084. 
+- Charvat, H., Remontet, L., Bossard, N., Roche, L., Dejardin, O., Rachet, B., Launoy, G., and Belot, A. (2016). A multilevel excess hazard model to estimate net survival on hierarchical data allowing for non linear and non proportional effects of covariates. Statistics in medicine, 35(18), 3066-3084. 
 - Coz, E., Charvat, H., Maucort-Boulch, D., and Fauvernier, M. (article in preparation). Flexible penalized marginal intensity models for recurrent event data. 
 - Danieli, C., Remontet, L., Bossard, N., Roche, L., and Belot, A. (2012). Estimating net survival: the importance of allowing for informative censoring. Statistics in medicine, 31(8), 775-786.
-- Estève, J., Benhamou, E., Croasdale, M., and Raymond, L. (1990) Relative survival and the estimation of net survival: elements for further discussion. Stat. Med., 9, 529-538.
-- Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N. and Remontet, L. (2019). Multi-dimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, Journal of the Royal Statistical Society, series C.  <https://doi.org/10.1111/rssc.12368>. 
+- Estève, J., Benhamou, E., Croasdale, M., and Raymond, L. (1990). Relative survival and the estimation of net survival: elements for further discussion. Stat. Med., 9, 529-538.
+- Fauvernier, M., Remontet, L., Uhry, Z., Bossard, N. and Roche, L. (2019a). survPen: an R package for hazard and excess hazard modelling with multidimensional penalized splines. Journal of Open Source Software, 4(40), 1434, <https://doi.org/10.21105/joss.01434>.
+- Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N. and Remontet, L. (2019b). Multi-dimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, Journal of the Royal Statistical Society, series C.  <https://doi.org/10.1111/rssc.12368>. 
 - Hennerfeind, A., Held, L., and Sauleau, E. A. (2008) A Bayesian analysis of relative cancer survival with geoadditive models. Stat Modelling, 8, 117-139.
 - Kauermann, G. (2005) Penalized spline smoothing in multivariable survival models with varying coefficients. Comput. Stat. Data Anal., 49, 169-186.
 - Kneib, T. and Fahrmeir, L. (2007) A mixed model approach for geoadditive hazard regression. Scand. J. Statist., 34, 207-228.
 - O Sullivan, F. (1988), Fast computation of fully automated log-density and log-hazard estimators. SIAM Journal on scientific and statistical computing, 9(2), 363-379.
+- Pan W. (2001), Akaike's information criterion in generalized estimating equations. Biometrics, 57(1):120-5. doi: 10.1111/j.0006-341x.2001.00120.x. PMID: 11252586.
 - Remontet, L., Bossard, N., Belot, A., and Esteve, J. (2007), An overall strategy based on regression models to estimate relative survival and model the effects of prognostic factors in cancer survival studies. Statistics in medicine, 26(10), 2214-2228. 
 - Remontet, L., Uhry, Z., Bossard, N., Iwaz, J., Belot, A., Danieli, C., Charvat, H., Roche, L. and CENSUR Working Survival Group (2018) Flexible and structured survival model for a simultaneous estimation of non-linear and non-proportional effects and complex interactions between continuous variables: Performance of this multidimensional penalized spline approach in net survival trend analysis. Stat Methods Med Res. 2018 Jan 1:962280218779408. doi: 10.1177/0962280218779408. [Epub ahead of print].
 - Wood, S.N. (2006). Low-rank scale-invariant tensor product smooths for generalized additive mixed models. Biometrics, 62(4), 1025-1036.
@@ -1535,28 +1660,21 @@ smoothing or regression parameters), it might indicate a convergence issue (see 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+<script>
+$(document).ready(function () {
+  // Wait a split second for the TOC to initialize
+  setTimeout(function() {
+    if (window.tocify) {
+      window.tocify.setOptions({ 
+        // 0 means it won't trigger until the header hits the top
+        // Increase to 20 or 50 if you want it to trigger a bit earlier
+        selectorsThreshold: 0, 
+        extendPage: false
+      });
+    }
+  }, 500);
+});
+</script>
 
 
 

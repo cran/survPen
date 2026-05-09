@@ -146,6 +146,7 @@ NULL
 #' \item{edf2}{effective degrees of freedom corrected for smoothing parameter uncertainty}
 #' \item{aic}{Akaike information criterion with number of parameters replaced by edf when there are penalized terms. Corresponds to 2*edf - 2*ll.unpen}
 #' \item{aic2}{Akaike information criterion corrected for smoothing parameter uncertainty. Be careful though, this is still a work in progress, especially when one of the smoothing parameters tends to infinity.}
+#' \item{qic}{For marginal models only, quasi-likelihood information criterion with independent assumption proposed by Pan (2001) ed terms. Version of aic with edf defined from the robust variance Vr instead of Vp}
 #' \item{iter.beta}{vector of numbers of iterations needed to estimate the regression parameters for each smoothing parameters trial. It thus contains \code{iter.rho+1} elements.}
 #' \item{X}{design matrix of the model}
 #' \item{S}{penalty matrix of the model}
@@ -202,6 +203,8 @@ NULL
 #' \item{converged}{convergence indicator, TRUE or FALSE. TRUE if Hess.beta.modif=FALSE and Hess.rho.modif=FALSE (or NULL)}
 #'
 #' @references
+#' Pan W. (2001), Akaike's information criterion in generalized estimating equations. Biometrics ;57(1):120-5. doi: 10.1111/j.0006-341x.2001.00120.x. PMID: 11252586.
+#'
 #' Wood, S.N., Pya, N. and Saefken, B. (2016), Smoothing parameter and model selection for general smooth models (with discussion). Journal of the American Statistical Association 111, 1548-1575
 #'
 #' @name survPenObject
@@ -2698,7 +2701,7 @@ cor.var <- function(model){
 # robust.var : implementation of robust variance
 #----------------------------------------------------------------------------------------------------------------
 
-#' Implementation of the robust variance Vr
+#' Implementation of the robust variance Vr and QIC (Pan 2001)
 #'
 #' Takes the model at convergence and calculates the robust variance matrix accounting for correlated survival times
 #'
@@ -2706,7 +2709,7 @@ cor.var <- function(model){
 #' @param data original dataset
 #' @param cluster.name name of cluster variable in data
 #' @param n.legendre number of nodes for Gauss-Legendre quadrature; default is 50
-#' @return survPen object with robust variance Vr
+#' @return survPen object with robust variance Vr and QIC
 #'
 robust.var <- function(model, data, cluster.name, n.legendre = 50){
 
@@ -2770,6 +2773,11 @@ robust.var <- function(model, data, cluster.name, n.legendre = 50){
   model$Vr <- 1/n_clust *invA %mult% Sigma %mult% invA
   
   rownames(model$Vr) <- colnames(model$Vr) <- rownames(model$Vp)
+  
+  #______________________________________________________
+  # deriving QIC (Pan 2001)
+  model$qic <- -2*model$ll.unpen + 2*sum(-model$Hess.unpen.beta * model$Vr)
+
   
   return(model)
   
@@ -2949,6 +2957,8 @@ robust.var <- function(model, data, cluster.name, n.legendre = 50){
 #' The user only needs to specify the `cluster` variable defining the statistical units for which repeated observations are available.
 #' This specification is performed via the `cluster` argument.
 #'
+#' For marginal models, the quasi-likelihood information criterion (Pan 2001) is available via model$qic.
+#'
 #' See the \href{../doc/survival_analysis_with_survPen.html}{survival_analysis_with_survPen vignette} for more details and an example of analysis.
 #'
 #' @section Convergence:
@@ -2965,6 +2975,7 @@ robust.var <- function(model, data, cluster.name, n.legendre = 50){
 #' Coz, E., Charvat, H., Maucort-Boulch, D., and Fauvernier, M. (submitted to Biostatistics). Flexible penalized marginal intensity models for recurrent event data. 
 #' Fauvernier, M., Roche, L., Uhry, Z., Tron, L., Bossard, N., Remontet, L. and the CENSUR Working Survival Group. Multidimensional penalized hazard model with continuous covariates: applications for studying trends and social inequalities in cancer survival, in revision in the Journal of the Royal Statistical Society, series C. \cr \cr
 #' O Sullivan, F. (1988), Fast computation of fully automated log-density and log-hazard estimators. SIAM Journal on scientific and statistical computing, 9(2), 363-379. \cr \cr
+#' Pan W. (2001), Akaike's information criterion in generalized estimating equations. Biometrics ;57(1):120-5. doi: 10.1111/j.0006-341x.2001.00120.x. PMID: 11252586.
 #' Remontet, L., Bossard, N., Belot, A., & Esteve, J. (2007), An overall strategy based on regression models to estimate relative survival and model the effects of prognostic factors in cancer survival studies. Statistics in medicine, 26(10), 2214-2228. \cr \cr
 #' Remontet, L., Uhry, Z., Bossard, N., Iwaz, J., Belot, A., Danieli, C., Charvat, H., Roche, L. and CENSUR Working Survival Group (2018) Flexible and structured survival model for a simultaneous estimation of non-linear and non-proportional effects and complex interactions between continuous variables: Performance of this multidimensional penalized spline approach in net survival trend analysis. Stat Methods Med Res. 2018 Jan 1:962280218779408. doi: 10.1177/0962280218779408. [Epub ahead of print]. \cr \cr
 #' Wood, S.N., Pya, N. and Saefken, B. (2016), Smoothing parameter and model selection for general smooth models (with discussion). Journal of the American Statistical Association 111, 1548-1575
@@ -4092,8 +4103,27 @@ predict.survPen <- function(object,newdata,newdata.ref=NULL,n.legendre=50,conf.i
 	qt.norm <- stats::qnorm(1-(1-conf.int)/2)
 
 	t1 <- newdata[,object$t1.name]
+	
+	if (!is.null(object$t0.name)){ # Usually t0 = 0 for prediction
+	# This part is usefull if one wants to recalculate the likelihood by hand
+	# This is typically used when we want to calculate the likelihood on a newdataset
+	# which has different start and stop times compared to the original dataset
+	
+		if (object$t0.name %in% names(newdata)){
+	
+			t0 <- newdata[,object$t0.name]
+		
+		}else{
 
-	t0 <- rep(0,length(t1))
+			t0 <- rep(0,length(t1))
+		
+		}
+		
+	}else{
+	
+		t0 <- rep(0,length(t1))
+		
+	}
 
 	tm <- (t1-t0)/2
 
@@ -4574,6 +4604,8 @@ summary.survPen <- function(object,...){
 	if (!is.null(object$Vr)){
 	
 		Variance <- object$Vr
+		
+		type <- "marginal hazard (or intensity) model"
 
 	}else{
 	

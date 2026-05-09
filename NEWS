@@ -1,4 +1,18 @@
 
+survPen v2.0.4
+==============
+
+Changes:
+* robust.var function was modified so that, for marginal intensity models, calculation of the QIC, information criterion derived by Pan (2001), 
+can now be retrieved as model$QIC
+* The vignette and help have been slightly modified accordingly, to present the QIC
+* Aesthetic changes to the vignette
+* summary.survPen was changed so that when a cluster is specified, the first sentence reads : "marginal hazard (or intensity) model"
+* The predict function now takes into account t0 if provided in the newdataset under the same name as the fitted survPen object (object$t0.name)). 
+This part is usefull if one wants to recalculate the likelihood by hand. This is typically used when we want to calculate the likelihood on a newdataset
+which has different start and stop times compared to the original dataset.
+	
+
 survPen v2.0.3
 ==============
 
